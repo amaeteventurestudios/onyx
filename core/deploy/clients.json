@@ -134,6 +134,18 @@
         "https://www.anansora.com/api/account/return",
         "https://anansora.129-146-26-28.sslip.io/api/account/return"
       ]
+    },
+    {
+      "id": "warfront",
+      "name": "Agent Warfront",
+      "product": "warfront",
+      "guests": false,
+      "color": "#F0B04A",
+      "home": "https://warfront.noveniqe.com",
+      "redirect_uris": [
+        "https://warfront.noveniqe.com/api/account/return",
+        "https://warfront.129-146-26-28.sslip.io/api/account/return"
+      ]
     }
   ]
 }

@@ -64,7 +64,7 @@ product's handoff); each one is on the list to move into Onyx.
 | SavvyMe | yes, keeps its own accounts (savvyme PR #6) | moving | yes | yes |
 | Isoteh | yes, keeps its own accounts (isoteh PR #19) | own ledger | yes | yes |
 | Anansora | yes, stories kept on the server | moving | yes | yes |
-| Agent Warfront | moving | no | yes | yes (when it stores data) |
+| Agent Warfront | yes, kit kept on the account | no | yes | yes |
 
 Not yet on Onyx: Jollof Pages, Jollof Studio, AuthorNX, Pagneto, CoreTech Media, Cathora (each with its own sign-in on
 another machine). Planned products (Egusi, Shop Gantry) start on Onyx. The full survey and order are in the plan
