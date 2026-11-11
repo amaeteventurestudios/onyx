@@ -93,6 +93,48 @@
         "https://teams.jisste.noveniqe.com/api/auth/onyx/callback",
         "https://teams.129-146-26-28.sslip.io/api/auth/onyx/callback"
       ]
+    },
+    {
+      "id": "prebuild",
+      "name": "Amaete Prebuild",
+      "product": "prebuild",
+      "guests": false,
+      "color": "#F2B705",
+      "home": "https://prebuild.amaete.com",
+      "secret_sha256": "96ac627c9a63a5e0153b5f118deac43badbba6297fc3f9baabb3698a6d66f113",
+      "redirect_uris": [
+        "https://prebuild.amaete.com/api/account?do=return"
+      ],
+      "items": {
+        "kinds": [
+          "build",
+          "plan"
+        ],
+        "free": 3,
+        "pass": 500,
+        "max_kb": 1000
+      },
+      "pass": {
+        "name": "Pro",
+        "plans": {
+          "month": {
+            "cents": 4999,
+            "interval": "month",
+            "count": 1,
+            "name": "Monthly",
+            "on": true,
+            "trial_days": 14
+          },
+          "year": {
+            "cents": 47988,
+            "interval": "year",
+            "count": 1,
+            "name": "Yearly",
+            "on": true,
+            "trial_days": 14
+          }
+        }
+      }
     }
   ]
 }

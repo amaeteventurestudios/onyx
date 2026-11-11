@@ -57,9 +57,9 @@ export function setCookie(res, name, value, { maxAge, secure, path = '/' } = {})
 }
 
 // ---- request bodies: forms and JSON, capped at 32 KB ----
-export async function body(req) {
+export async function body(req, max = 32_768) {
   const chunks = []; let size = 0;
-  for await (const c of req) { size += c.length; if (size > 32_768) throw Object.assign(new Error('Too large'), { status: 413 }); chunks.push(c); }
+  for await (const c of req) { size += c.length; if (size > max) throw Object.assign(new Error('Too large'), { status: 413 }); chunks.push(c); }
   const raw = Buffer.concat(chunks).toString();
   const type = req.headers['content-type'] ?? '';
   if (type.includes('application/json')) { try { return JSON.parse(raw || '{}'); } catch { throw Object.assign(new Error('Bad JSON'), { status: 400 }); } }

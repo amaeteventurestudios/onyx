@@ -65,7 +65,8 @@ if sudo grep -q '^SMTP_PASS=.' "$ENVF" && sudo grep -q '^SMTP_HOST=.' "$ENVF"; t
 elif sudo grep -q '^RESEND_API_KEY=.' "$ENVF"; then setkv MAIL_PROVIDER resend; elif sudo grep -q '^BREVO_API_KEY=.' "$ENVF"; then setkv MAIL_PROVIDER brevo; fi
 
 # One secret per game. Core reads every file here; each game gets its own copy, readable only by that game's service.
-for id in $(python3 -c "import json;print(' '.join(c['id'] for c in json.load(open('$APP/deploy/clients.json'))['clients']))"); do
+# A product hosted elsewhere (secret_sha256 in clients.json) keeps its secret in its own host's settings, so none is made here.
+for id in $(python3 -c "import json;print(' '.join(c['id'] for c in json.load(open('$APP/deploy/clients.json'))['clients'] if not c.get('secret_sha256')))"); do
   f="$ETC/clients/$id.env"
   if ! sudo test -f "$f"; then sudo install -m 640 -o root -g novenique /dev/null "$f"; printf 'NOVENIQUE_CLIENT_SECRET=%s\n' "$(openssl rand -hex 32)" | sudo tee "$f" >/dev/null; fi
 done
