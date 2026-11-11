@@ -9,6 +9,7 @@
 //   await Onyx.save({ kind: 'build', name, data, thumb })   // asks to sign in, or to upgrade when the shelf is full
 //   Onyx.library()  Onyx.upgrade('year')  Onyx.account()  Onyx.signIn()  Onyx.ask('Name it', 'Name', 'My house')  Onyx.toast('Saved')
 //   Onyx.me() -> { signed_in, user, pro: { active }, plans }   (also sent as the 'onyx:change' event on window)
+//   if (!Onyx.gate('GLB export is part of Pro.')) return;   // a Pro-only tool: opens the Pro sheet for everyone else
 //
 // Colours follow the page: set --ox-bg, --ox-ink, --ox-soft, --ox-line, --ox-accent, --ox-accent-ink (they fall back to
 // --paper, --ink, --soft, --line, --accent and --accent-ink, then to a light default).
@@ -37,6 +38,14 @@
     return O.me;
   }
   const pro = () => !!(O.me && O.me.pro && O.me.pro.active);
+  /** For a Pro-only tool: true when the person may use it (Pro, or nothing on sale yet, or accounts not answering), otherwise
+   * opens the Pro sheet with `why` and answers false. Synchronous, so it can sit in a click handler. */
+  function gate(why) {
+    const m = O.me;
+    if (!m || m.off || !m.sell || pro()) return true;
+    upgrade(null, why);
+    return false;
+  }
 
   // ---------- the sheet ----------
   let root = null, lastFocus = null;
@@ -256,6 +265,6 @@
     return Onyx;
   }
 
-  const Onyx = { init, me, isPro: pro, signIn, account, library, upgrade, manage, save, load, remove, ask, toast, close };
+  const Onyx = { init, me, isPro: pro, gate, signIn, account, library, upgrade, manage, save, load, remove, ask, toast, close };
   window.Onyx = Onyx;
 })();

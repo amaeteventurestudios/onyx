@@ -26,7 +26,7 @@ Copy them into the product (they are small and change rarely; update them here f
 2. In the product: `api/account.js` = `createOnyxHandler({ clientId, site, after })`, and on each page
    `Onyx.init({ api: '/api/account', brand, items: 'builds', button: '#account', onOpen })`. Save with
    `Onyx.save({ kind, name, data, thumb })`; open the shelf with `Onyx.library()`; sell with `Onyx.upgrade('month')`.
-3. Check `Onyx.isPro()` (or `me().pro.active`) before a Pro-only tool, and call `Onyx.upgrade()` when it is false.
+3. Put `if (!Onyx.gate("why")) return;` at the top of a Pro-only tool: it lets Pro (and everyone while nothing is on sale) through and opens the Pro sheet for the rest.
 
 ## On the Onyx side
 Saved items live in Onyx's `nv_items` table (`core/lib/items.mjs`), one shelf per person per product, deleted with the
