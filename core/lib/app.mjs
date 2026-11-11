@@ -284,7 +284,7 @@ export function makeCore(cfg, deps = {}) {
     if (!/^[A-Za-z0-9._~-]{43,128}$/.test(String(form.code_verifier ?? '')) || !same(challengeOf(form.code_verifier), row.challenge)) return bad();
     const u = await A.active(row.user_id);
     if (!u) return bad();
-    return json(res, 200, { user: A.publicView(u, await A.account(u.id)), roles: await rolesFor(u.id, client), merged_from: row.merged_from ?? [],
+    return json(res, 200, { user: viewFor(client, u, await A.account(u.id)), roles: await rolesFor(u.id, client), merged_from: row.merged_from ?? [],
       needs_profile: A.needsProfile(u), ticket: ticketFor(client, { u: u.id }) });
   }
 
@@ -292,6 +292,13 @@ export function makeCore(cfg, deps = {}) {
   // A game can keep the whole sign-in on its own page: its server calls these with its client secret, passing what the
   // player typed. Nothing here sets a cookie; the game keeps its own session. A ticket (signed, 30 minutes, this game only)
   // carries a half-finished sign-in to the next step: the player's name and @handle, or the yes before merging a guest.
+  // A studio product that keeps its own accounts (SavvyMe, Isoteh) sets "share_email": true in clients.json to receive the
+  // person's verified email, so it can find the account they already made there. Other products never see it.
+  const viewFor = (client, u, acct) => {
+    const v = A.publicView(u, acct);
+    if (client.share_email === true && v.email_verified && u.email) v.email = String(u.email).toLowerCase();
+    return v;
+  };
   const ticketFor = (client, t) => sign({ ...t, c: client.id, exp: Date.now() + FLOW_MINUTES * 60_000 }, cfg.key);
   const ticketOf = (client, raw) => { const t = unsign(String(raw ?? ''), cfg.key); return t && t.c === client.id && t.exp > Date.now() ? t : null; };
   async function signedInHere(client, { provider, subject, email, name }, guestId) {
@@ -314,7 +321,7 @@ export function makeCore(cfg, deps = {}) {
   async function doneHere(client, userId, mergedFrom) {
     const u = await A.active(userId);
     if (!u) return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Unknown user' } } };
-    return { status: 200, body: { user: A.publicView(u, await A.account(u.id)), roles: await rolesFor(u.id, client), merged_from: mergedFrom,
+    return { status: 200, body: { user: viewFor(client, u, await A.account(u.id)), roles: await rolesFor(u.id, client), merged_from: mergedFrom,
       needs_profile: A.needsProfile(u), ticket: ticketFor(client, { u: u.id, mf: mergedFrom }) } };
   }
   async function hereApi(req, res, client, path, form) {
