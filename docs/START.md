@@ -38,7 +38,11 @@ product's handoff); each one is on the list to move into Onyx.
 
 1. **Accounts and payments.** Add the product to `core/deploy/clients.json` (id, name, home, redirect URIs, plans), then
    follow `kit/README.md`. A product on another host (Vercel, Contabo) keeps its own server and stores only the SHA-256
-   of its client secret here.
+   of its client secret here. A product that already has its own accounts (SavvyMe, Isoteh) sets `"share_email": true`
+   so it receives the verified email and can find existing accounts by it; it signs people in server to server
+   (`/v1/signin/email/*`, `/v1/signin/profile`, and `/authorize` with `via=google` for Google). Copy `isoteh/lib/onyx.mjs`
+   (Node) or `savvyme/server/pb_hooks/onyx_lib.js` (PocketBase). A new product with no accounts of its own can copy
+   `anansora/server/account.mjs`, which also keeps the player's saves.
 2. **Hosting** (only if it runs on the shared server): give the product a `deploy/install.sh` that installs it next to
    the others (own systemd service on 127.0.0.1, own Caddy file in `/etc/caddy/sites/`, own user), and add a
    `<product>-deploy.yml` in the noveniqe repo copied from `anansora-deploy.yml`. Pick a free port: look at the others'
@@ -57,9 +61,9 @@ product's handoff); each one is on the list to move into Onyx.
 | Jisste | yes | no | yes | yes |
 | Jisste Teams | yes | own plans | yes | yes |
 | Prebuild | yes (Vercel) | Pro | no | on Vercel |
-| SavvyMe | moving | moving | yes | yes |
-| Isoteh | moving | own ledger | yes | yes |
-| Anansora | moving | moving | yes | yes (when it stores data) |
+| SavvyMe | yes, keeps its own accounts (savvyme PR #6) | moving | yes | yes |
+| Isoteh | yes, keeps its own accounts (isoteh PR #19) | own ledger | yes | yes |
+| Anansora | yes, stories kept on the server | moving | yes | yes |
 | Agent Warfront | moving | no | yes | yes (when it stores data) |
 
 Not yet on Onyx: Jollof Pages, Jollof Studio, AuthorNX, Pagneto, CoreTech Media, Cathora (each with its own sign-in on

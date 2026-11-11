@@ -120,6 +120,20 @@
         "https://isoteh.amaete.com/v1/auth/onyx/return",
         "https://ads.129-146-26-28.sslip.io/v1/auth/onyx/return"
       ]
+    },
+    {
+      "id": "anansora",
+      "name": "Anansora",
+      "product": "anansora",
+      "guests": false,
+      "color": "#F0B54C",
+      "home": "https://anansora.noveniqe.com",
+      "redirect_uris": [
+        "https://anansora.noveniqe.com/api/account/return",
+        "https://anansora.com/api/account/return",
+        "https://www.anansora.com/api/account/return",
+        "https://anansora.129-146-26-28.sslip.io/api/account/return"
+      ]
     }
   ]
 }
