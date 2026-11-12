@@ -20,6 +20,16 @@ In code and on the server the older names stay as they are (`core/`, the `noveni
 settings, `/opt/novenique`, `accounts.noveniqe.com`). Renaming them would change nothing for people and could break
 sign-in.
 
+## Security checks
+Every product on Onyx gets the same checks with nothing to set up:
+- Every 4 hours, each product's repositories are scanned (leaked keys, packages with known holes, known malware,
+  risky code) and each live site gets the public launch check (HTTPS, security headers, exposed files and keys).
+- After every deploy, the deploy job runs the launch check on the site it just put live
+  (noveniqe `.github/workflows/preflight.yml`). A site that is not ready gets its own issue in the noveniqe
+  repository, so GitHub emails you, and the issue closes itself once the site is clear again.
+- Before a new package is added to any product, it is checked first (known malware, look-alike names, brand-new
+  versions, install scripts). Onyx itself has no outside packages: Node 22 only.
+
 ## How it reaches the server
 The deploy workflows and their secrets (server key, Google, email, Stripe, backups) still live in the
 [noveniqe](https://github.com/amaeteventurestudios/noveniqe) repository. They check out this repository's `main`
