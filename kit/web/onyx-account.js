@@ -159,7 +159,7 @@
     const box = card.querySelector('.ox-shelf');
     if (!r.ok) { box.innerHTML = `<p class="ox-err">${esc(r.msg || 'Could not load. Try again.')}</p>`; return; }
     const { items, used, limit, pass } = r.body;
-    const meter = `<div class="ox-meter"><span>${used} of ${limit} saved</span><i style="--w:${Math.min(100, (used / limit) * 100)}%"></i>${pass ? '' : `<button class="ox-link" data-a="pro">Go Pro for unlimited</button>`}</div>`;
+    const meter = `<div class="ox-meter"><span>${used} of ${limit} saved</span><i style="--w:${Math.min(100, (used / limit) * 100)}%"></i>${pass || !(O.me && O.me.sell) ? '' : `<button class="ox-link" data-a="pro">Go Pro for unlimited</button>`}</div>`;
     if (!items.length) { box.innerHTML = meter + `<p class="ox-empty">Nothing saved yet. Use <b>Save to my ${esc(O.items)}</b> and it shows up here on every device.</p>`; }
     else box.innerHTML = meter + `<ul class="ox-grid">${items.map((it) => `<li data-id="${esc(it.id)}"><button class="ox-open" title="Open">${it.thumb ? `<img src="${esc(it.thumb)}" alt="">` : '<span class="ox-ph"></span>'}<b>${esc(it.name)}</b><small>${new Date(String(it.updated).replace(' ', 'T')).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</small></button><button class="ox-del" title="Delete" aria-label="Delete ${esc(it.name)}">Delete</button></li>`).join('')}</ul>`;
     const p = box.querySelector('[data-a=pro]'); if (p) p.onclick = () => upgrade();
