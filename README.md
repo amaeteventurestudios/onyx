@@ -8,6 +8,8 @@ repository, brand and domain. Players and customers never see the name Onyx.
 
 Home: onyx.amaete.com.
 
+Building something new on Onyx? Start with [docs/START.md](docs/START.md).
+
 ## What is in this repository
 - `core/`: Onyx accounts. One account across every product: guests, Google, 6-digit email codes, sign-in on the
   product's own screen, roles per product, the pass and payments (Stripe). See [core/README.md](core/README.md).
