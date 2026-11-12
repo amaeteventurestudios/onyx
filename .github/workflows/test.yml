@@ -18,7 +18,9 @@ jobs:
       - name: Backup tool
         run: python3 -m unittest discover -s ops/backup -v
       - name: Scripts parse
-        run: for f in ops/server/install.sh ops/check/server-check.sh ops/ci/ssh-setup.sh core/deploy/install.sh; do bash -n "$f"; done
+        run: for f in ops/server/install.sh ops/check/server-check.sh ops/ci/ssh-setup.sh core/deploy/install.sh ops/offsite/*.sh; do bash -n "$f"; done
+      - name: Off-server copies (serve and pull)
+        run: bash ops/offsite/test_offsite.sh
       - name: Accounts service (Core), against Palasora's real schema and against the bare fixture
         run: |
           curl -fsSL -o pb.zip https://github.com/pocketbase/pocketbase/releases/download/v0.40.5/pocketbase_0.40.5_linux_amd64.zip

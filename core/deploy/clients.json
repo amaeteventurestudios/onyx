@@ -93,6 +93,59 @@
         "https://teams.jisste.noveniqe.com/api/auth/onyx/callback",
         "https://teams.129-146-26-28.sslip.io/api/auth/onyx/callback"
       ]
+    },
+    {
+      "id": "savvyme",
+      "name": "SavvyMe",
+      "product": "savvyme",
+      "guests": false,
+      "share_email": true,
+      "color": "#FF5B2E",
+      "home": "https://savvyme.amaete.com",
+      "redirect_uris": [
+        "https://savvyme.amaete.com/api/onyx/return",
+        "https://app.savvymeapp.com/api/onyx/return",
+        "https://app.savvyme.129-146-26-28.sslip.io/api/onyx/return"
+      ]
+    },
+    {
+      "id": "isoteh",
+      "name": "Isoteh",
+      "product": "isoteh",
+      "guests": false,
+      "share_email": true,
+      "color": "#C34218",
+      "home": "https://isoteh.amaete.com",
+      "redirect_uris": [
+        "https://isoteh.amaete.com/v1/auth/onyx/return",
+        "https://ads.129-146-26-28.sslip.io/v1/auth/onyx/return"
+      ]
+    },
+    {
+      "id": "anansora",
+      "name": "Anansora",
+      "product": "anansora",
+      "guests": false,
+      "color": "#F0B54C",
+      "home": "https://anansora.noveniqe.com",
+      "redirect_uris": [
+        "https://anansora.noveniqe.com/api/account/return",
+        "https://anansora.com/api/account/return",
+        "https://www.anansora.com/api/account/return",
+        "https://anansora.129-146-26-28.sslip.io/api/account/return"
+      ]
+    },
+    {
+      "id": "warfront",
+      "name": "Agent Warfront",
+      "product": "warfront",
+      "guests": false,
+      "color": "#F0B04A",
+      "home": "https://warfront.noveniqe.com",
+      "redirect_uris": [
+        "https://warfront.noveniqe.com/api/account/return",
+        "https://warfront.129-146-26-28.sslip.io/api/account/return"
+      ]
     }
   ]
 }

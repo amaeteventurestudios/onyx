@@ -1,5 +1,5 @@
 {
-  "_about": "What the nightly backup copies on the shared server. 'sqlite' = SQLite files (online backup API, services keep running); 'copy' = files or folders copied as they are. Globs allowed; missing paths are skipped and listed in the manifest. Env files hold the server-made secrets (for example Palasora's ACCESS_ENCRYPTION_KEY): without them a restored database can't be used, so they are backed up too and the off-server copy is encrypted.",
+  "_about": "What the nightly backup copies on the shared server. 'sqlite' = SQLite files (online backup API, services keep running); 'copy' = files or folders copied as they are. Globs allowed; missing paths are skipped and listed in the manifest. Env files hold the server-made secrets (for example Palasora's ACCESS_ENCRYPTION_KEY): without them a restored database can't be used, so they are backed up too and the off-server copy is encrypted. Products that keep no data on the server yet (Agent Warfront, Anansora) are listed with the folder they will use, so their data is backed up from the first day it exists.",
   "root": "/var/backups/novenique",
   "keep": 14,
   "sets": [
@@ -20,6 +20,30 @@
     {
       "name": "jisst",
       "copy": ["/var/lib/jisst/snapshot", "/etc/jisst.env", "/etc/jisst-tuwunel.toml", "/etc/jisst-livekit.yaml"]
+    },
+    {
+      "name": "savvyme",
+      "sqlite": ["/var/lib/savvyme-pb/*.db"],
+      "copy": ["/var/lib/savvyme-pb/storage"]
+    },
+    {
+      "name": "isoteh",
+      "sqlite": ["/var/lib/isoteh/*.db"],
+      "copy": ["/var/lib/isoteh/creatives", "/etc/isoteh"]
+    },
+    {
+      "name": "jisste-teams",
+      "copy": ["/var/backups/jisste-teams/jisste_teams.dump", "/var/lib/jisste-teams/storage", "/etc/jisste-teams.env"]
+    },
+    {
+      "name": "agent-warfront",
+      "sqlite": ["/var/lib/agent-warfront/*.db"],
+      "copy": ["/var/lib/agent-warfront/data", "/etc/agent-warfront.env"]
+    },
+    {
+      "name": "anansora",
+      "sqlite": ["/var/lib/anansora/*.db"],
+      "copy": ["/var/lib/anansora/data", "/etc/anansora.env"]
     },
     {
       "name": "monitoring",

@@ -1,6 +1,6 @@
 # Server safety (Phase 0)
 
-Everything here keeps the shared Oracle server safe for both games. Nothing in it touches a game's code, data, ports
+Everything here keeps the shared Oracle server safe for every product on it. Nothing in it touches a game's code, data, ports
 or web server files.
 
 | Piece | What it does | Where |
@@ -8,6 +8,7 @@ or web server files.
 | Nightly backup | 03:30 UTC: every database (SQLite online backup, services keep running), uploaded files, analytics, env files and web server certificates for every product into `/var/backups/novenique/novenique-<time>/`, with a manifest and checksums. Keeps 14. | `backup/novenique_backup.py`, `backup/sources.json` |
 | Restore drill | Sundays 04:30 UTC: re-checks the newest backup, opens every database copy in a scratch folder, checks it is intact and its row counts match. Never touches live data. Result in `/var/backups/novenique/LAST_DRILL.json`. | same tool, `drill` |
 | Off-server copy | 04:15 UTC: the newest backup, encrypted with your passphrase on GitHub's machine, kept 30 days as a workflow artifact. Fails (and emails you) if the newest backup is over 30 hours old. | `.github/workflows/backup-offsite.yml` |
+| Copy at home | 05:15 UTC: the AI node (ai-node-01) fetches every new backup over Tailscale into `/srv/ai-node/storage/ssd/onyx-backups` on its Samsung T7 SSD, checks every file against the checksums, keeps 30. The node asks; the server can't reach or delete those copies. The node's key may only list and fetch (`onyx-backup-serve`). Result in `onyx-backups/LAST_PULL.json`. | `offsite/` (setup: `offsite/install-puller.sh` on the node, then commit its key line to `offsite/keys/`) |
 | Ceilings | Memory and CPU limits per service (never below twice what a service uses at install time); system log capped at 500 MB. | `server/install.sh` |
 | Server check | Read-only report: memory, disk, CPU, services, ports, versions, data sizes, backups, timers. Mondays, or on demand. | `check/server-check.sh`, `.github/workflows/server-check.yml` |
 | Status page | Uptime Kuma (MIT): checks every site each minute, keeps the history, can alert by email or Telegram. At `https://status.129-146-26-28.sslip.io` behind your `OWNER_PASSWORD` (username `owner`); create its admin account on the first visit. | `server/monitoring.sh` |
@@ -41,4 +42,11 @@ From the off-server copy (download the artifact from the workflow run, unzip it)
 
 ```bash
 openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in novenique-<time>.tar.gz.enc | tar -xzf -
+```
+
+From the copy on the AI node (plain folders, same layout as on the server):
+
+```bash
+ls /srv/ai-node/storage/ssd/onyx-backups/                     # one folder per night, LAST_PULL.json says how the last copy went
+python3 ops/backup/novenique_backup.py restore /srv/ai-node/storage/ssd/onyx-backups/novenique-<time> savvyme /tmp/restore
 ```

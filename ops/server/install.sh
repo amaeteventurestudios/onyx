@@ -5,6 +5,7 @@
 #   - memory and CPU ceilings for each service, so one runaway process can't starve the others or the server
 #   - a cap on the system log's disk use
 #   - Uptime Kuma (status page) and Umami (visitor stats), see monitoring.sh
+#   - read-only access for our own machines to pull off-server copies of the backups (ops/offsite)
 # Safe to run again: every step replaces what the last run made.
 set -euo pipefail
 OPS=/opt/novenique/ops BK=/var/backups/novenique
@@ -44,6 +45,26 @@ job backup "Novenique nightly backup of every product" "backup --config $OPS/bac
 job drill "Novenique weekly restore drill (never touches live data)" "drill --root $BK" "Sun *-*-* 04:30:00 UTC"
 sudo systemctl daemon-reload
 sudo systemctl enable --now novenique-backup.timer novenique-drill.timer >/dev/null
+
+# ---- off-server copies pulled by our own machines (ops/offsite) ----
+# A machine listed in ops/offsite/keys/ may list and fetch finished backups over Tailscale, nothing else. The key runs
+# only /usr/local/sbin/onyx-backup-serve (read-only), only from that machine's address. No keys: no account.
+sudo install -m 755 -o root -g root "$OPS/offsite/serve.sh" /usr/local/sbin/onyx-backup-serve
+keys=$(for f in "$OPS"/offsite/keys/*.pub; do [ -f "$f" ] && grep -E '^from="[0-9a-fA-F.:,]+" ssh-(ed25519|rsa) [A-Za-z0-9+/=]+' "$f" | head -1; done || true)
+if [ -n "$keys" ]; then
+  id onyx-backup >/dev/null 2>&1 || sudo useradd --system --create-home --home-dir /var/lib/onyx-backup --shell /bin/sh onyx-backup
+  sudo install -d -m 700 -o onyx-backup -g onyx-backup /var/lib/onyx-backup/.ssh
+  printf '%s\n' "$keys" | sed 's|^from=|restrict,command="sudo -n /usr/local/sbin/onyx-backup-serve",from=|' |
+    sudo tee /var/lib/onyx-backup/.ssh/authorized_keys >/dev/null
+  sudo chown onyx-backup:onyx-backup /var/lib/onyx-backup/.ssh/authorized_keys && sudo chmod 600 /var/lib/onyx-backup/.ssh/authorized_keys
+  printf '%s\n' 'Defaults!/usr/local/sbin/onyx-backup-serve env_keep += "SSH_ORIGINAL_COMMAND"' \
+    'onyx-backup ALL=(root) NOPASSWD: /usr/local/sbin/onyx-backup-serve' > /tmp/onyx-backup.sudoers
+  sudo visudo -cqf /tmp/onyx-backup.sudoers && sudo install -m 440 -o root -g root /tmp/onyx-backup.sudoers /etc/sudoers.d/onyx-backup
+  rm -f /tmp/onyx-backup.sudoers
+  echo "Backup copiers allowed: $(printf '%s\n' "$keys" | wc -l)"
+elif id onyx-backup >/dev/null 2>&1; then
+  sudo rm -f /var/lib/onyx-backup/.ssh/authorized_keys /etc/sudoers.d/onyx-backup; echo "Backup copiers: none (access removed)"
+fi
 
 # ---- memory and CPU ceilings ----
 # MemoryHigh slows a service down before MemoryMax stops it. A ceiling is never set below twice what the service uses
