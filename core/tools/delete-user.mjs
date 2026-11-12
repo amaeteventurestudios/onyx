@@ -4,12 +4,15 @@
 import { loadConfig, readEnvFile } from '../lib/config.mjs';
 import { makePB, q } from '../lib/pb.mjs';
 import { makeAccounts } from '../lib/accounts.mjs';
+import { makeEmail } from '../lib/email.mjs';
 
 const args = process.argv.slice(2), envAt = args.indexOf('--env');
 const env = envAt >= 0 ? { ...process.env, ...readEnvFile(args.splice(envAt, 2)[1]) } : process.env;
 const [who] = args;
 if (!who) { console.error('usage: delete-user.mjs <email or @handle>'); process.exit(2); }
 const cfg = loadConfig(env), pb = makePB(cfg.pb), A = makeAccounts({ pb, cfg }), realm = await A.realm();
+const E = makeEmail({ cfg, pb, A });
+A.onErase = (id, email) => E.forget(id, email);   // off every email list too
 const u = await pb.first('users', `tenant_id=${q(realm)} && account_status!='deleted' && ` + (who.startsWith('@') ? `handle=${q(who.slice(1).toLowerCase())}` : `email=${q(who.toLowerCase())}`));
 if (!u) { console.error('No account with that email or handle.'); process.exit(1); }
 await A.erase(u.id);
