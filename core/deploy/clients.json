@@ -188,6 +188,26 @@
           }
         }
       }
+    },
+    {
+      "id": "remodel",
+      "name": "Amaete Remodel",
+      "product": "remodel",
+      "guests": false,
+      "color": "#FF8C5A",
+      "home": "https://remodel.amaete.com",
+      "secret_sha256": "2bc59cc2f30a7fdc14bec3e9d4ad4a2a609943a207fc5fe405f8f48888ce9556",
+      "redirect_uris": [
+        "https://remodel.amaete.com/api/account?do=return"
+      ],
+      "items": {
+        "kinds": [
+          "room"
+        ],
+        "free": 10,
+        "pass": 500,
+        "max_kb": 1100
+      }
     }
   ]
 }

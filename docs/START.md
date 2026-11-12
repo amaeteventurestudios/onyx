@@ -61,6 +61,7 @@ product's handoff); each one is on the list to move into Onyx.
 | Jisste | yes | no | yes | yes |
 | Jisste Teams | yes | own plans | yes | yes |
 | Prebuild | yes (Vercel) | Pro | no | on Vercel |
+| Remodel | yes (Vercel), saved rooms | not on sale yet | no | on Vercel |
 | SavvyMe | yes, keeps its own accounts (savvyme PR #6) | moving | yes | yes |
 | Isoteh | yes, keeps its own accounts (isoteh PR #19) | own ledger | yes | yes |
 | Anansora | yes, stories kept on the server | moving | yes | yes |
