@@ -133,6 +133,7 @@ export function makeAccounts({ pb, cfg }) {
      *  person can sign up again with the same email. Game records keep the anonymous id. Run by staff (tools/delete-user.mjs). */
     async erase(userId, by = 'server-tool') {
       const u = await A.user(userId);
+      await A.onErase?.(u.id, isPlaceholder(u.email) ? '' : u.email);   // the email block forgets them (lib/email.mjs)
       await pb.update('users', u.id, { account_status: 'deleted', display_name: 'Deleted player', handle: '', verified: false,
         email: `d${u.id.toLowerCase()}@${GUEST_DOMAIN}` });
       for (const c of ['nv_sessions', 'nv_identities', 'nv_roles', 'nv_handle_holds', 'nv_items']) {

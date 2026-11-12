@@ -12,6 +12,7 @@ steps to plug a new product in. A new product should write only what makes it di
 | Plans, passes, trials, Stripe checkout and the billing page | Onyx pass | `core/lib/billing.mjs`; plans live in `core/deploy/clients.json` |
 | Roles per product, staff with a second sign-in step, audit trail | Onyx roles | `core/lib/roles.mjs` |
 | Saving a person's work (a shelf per person per product) | Onyx items | `core/lib/items.mjs`, `/v1/items` |
+| Email to the people who want it: lists with tags, double opt-in, newsletters (now or scheduled), automations (on joining, on a tag, on an event the product sends), unsubscribe in one click, open and click reports | Onyx email | `core/lib/email.mjs`, `/v1/email`; lists live with the product in `core/deploy/clients.json` (`email`) |
 | Hosting on the shared server with push-to-deploy | Deploy desk | a `<product>-deploy.yml` workflow in the noveniqe repo + the product's own `deploy/install.sh` |
 | Nightly backups, weekly restore drill, an encrypted copy on GitHub and a copy on the AI node's SSD | Onyx ops | `ops/backup/sources.json`, `ops/offsite/` |
 | Uptime checks, status page, cookieless visitor stats (Umami), memory ceilings | Onyx ops | `ops/server/`, `ops/README.md` |
@@ -24,7 +25,6 @@ product's handoff); each one is on the list to move into Onyx.
 
 | Block | Lives in | What it does |
 | --- | --- | --- |
-| Email: lists, double opt-in, newsletters, automations, unsubscribe, open and click reports | pagneto (`src/app/(frontend)/dashboard/email`, `audience`) | Every product that sends mail |
 | Payouts to people (Stripe Connect), discount codes, affiliates | pagneto (`dashboard/payouts`), coretech-media | Marketplaces, creators, publishers |
 | Short links, QR codes, cookieless page stats | pagneto (`dashboard/links`) | Sharing and simple analytics |
 | Sponsored slot (ads without tracking) | isoteh (`sdk/`) | Any product that shows ads |
@@ -49,8 +49,16 @@ product's handoff); each one is on the list to move into Onyx.
    `install.sh` first.
 3. **Backups.** Add a set to `ops/backup/sources.json` for every database (`sqlite`), upload folder and env file
    (`copy`) the product keeps. A product with no set is not backed up.
-4. **Watching.** Add the site to the uptime list and to Umami (`ops/server/monitoring.sh`).
-5. **Own brand.** People see the product's name, never "Onyx" or "Noveniqe". Keep `BRAND` in one place in the product.
+4. **Email** (only if the product mails people). Add an `email` block to the product in `core/deploy/clients.json`:
+   its lists (`"news": { "name": "...", "double_opt_in": true, "public": false }`), a monthly cap, a postal address for the
+   footer (newsletters and automations wait until there is one) and `"on": false`. The product's server then calls
+   `/v1/email/*` with its client secret (the list of calls is at the top of `core/lib/email.mjs`); copy SavvyMe's
+   `server/pb_hooks/email.pb.js` (PocketBase) for joining from the app and an owner's Email tab. Set `"on": true` only with
+   the owner's go: from then on real people get mail. Sends use the shared mailbox under the product's name unless the
+   product sets its own `from`. A public list (`"public": true`) also takes a plain HTML form posting to
+   `https://accounts.noveniqe.com/mail/join` (`product`, `list`, `email`, `name`, and an empty hidden `website` field).
+5. **Watching.** Add the site to the uptime list and to Umami (`ops/server/monitoring.sh`).
+6. **Own brand.** People see the product's name, never "Onyx" or "Noveniqe". Keep `BRAND` in one place in the product.
 
 ## Products on Onyx
 
@@ -62,7 +70,7 @@ product's handoff); each one is on the list to move into Onyx.
 | Jisste Teams | yes | own plans | yes | yes |
 | Prebuild | yes (Vercel) | Pro | no | on Vercel |
 | Remodel | yes (Vercel), saved rooms | not on sale yet | no | on Vercel |
-| SavvyMe | yes, keeps its own accounts (savvyme PR #6) | moving | yes | yes |
+| SavvyMe | yes, keeps its own accounts (savvyme PR #6); email list "news" (off until the owner's go) | moving | yes | yes |
 | Isoteh | yes, keeps its own accounts (isoteh PR #19) | own ledger | yes | yes |
 | Anansora | yes, stories kept on the server | moving | yes | yes |
 | Agent Warfront | yes, kit kept on the account | no | yes | yes |

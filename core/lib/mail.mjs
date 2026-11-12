@@ -1,4 +1,4 @@
-// Sign-in codes by email. Providers: "smtp" (any mailbox's outgoing server, such as your own web hosting's), Resend or Brevo
+// Email out of Core: sign-in codes, and the email block's confirmations, newsletters and automations (lib/email.mjs). Providers: "smtp" (any mailbox's outgoing server, such as your own web hosting's), Resend or Brevo
 // (their free tiers are enough to start; the key lives only in the server's env file), or "sink" for development and tests
 // (writes to a file, nothing leaves the machine). "off" hides email sign-in. A game can send from its own address (`from` in
 // deploy/clients.json) when the mailbox is allowed to send as it.
@@ -12,16 +12,24 @@ export async function sendCode(mail, to, code, brand, from = mail.from) {
   const text = `Your sign-in code for ${brand} is ${code}.\n\nIt works for 10 minutes. If you did not ask for it, ignore this email: nobody can sign in without the code.\n\n${brand}`;
   const html = `<p>Your sign-in code for ${brand} is</p><p style="font-size:28px;font-weight:700;letter-spacing:4px">${code}</p>`
     + '<p>It works for 10 minutes. If you did not ask for it, ignore this email: nobody can sign in without the code.</p>' + `<p>${brand}</p>`;
+  return sendMail(mail, { to, subject, text, html, from, code });
+}
+
+/** One message through the configured provider. `headers` (List-Unsubscribe and the like) and `replyTo` are optional. */
+export async function sendMail(mail, { to, subject, text, html, from = mail.from, replyTo, headers = {}, code }) {
   if (mail.provider === 'sink') {
-    if (mail.sinkFile) appendFileSync(mail.sinkFile, JSON.stringify({ to, subject, code, at: new Date().toISOString() }) + '\n');
-    mail.last = { to, code };
+    const m = { to, subject, ...(code ? { code } : {}), text, html, from, replyTo, headers, at: new Date().toISOString() };
+    if (mail.sinkFile) appendFileSync(mail.sinkFile, JSON.stringify(code ? { to, subject, code, at: m.at } : m) + '\n');
+    if (code) mail.last = { to, code };
+    (mail.sent ??= []).push(m); if (mail.sent.length > 500) mail.sent.shift();
     return true;
   }
-  if (mail.provider === 'smtp' && mail.smtp?.host) return smtpSend(mail.smtp, { from, to, subject, text, html });
+  if (mail.provider === 'smtp' && mail.smtp?.host) return smtpSend(mail.smtp, { from, to, subject, text, html, replyTo, headers });
   if (mail.provider === 'resend' && mail.resendKey) {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST', headers: { authorization: `Bearer ${mail.resendKey}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ from, to: [to], subject, text, html }), signal: AbortSignal.timeout(10_000),
+      body: JSON.stringify({ from, to: [to], subject, text, html, ...(replyTo ? { reply_to: replyTo } : {}), ...(Object.keys(headers).length ? { headers } : {}) }),
+      signal: AbortSignal.timeout(10_000),
     });
     return r.ok;
   }
@@ -29,7 +37,8 @@ export async function sendCode(mail, to, code, brand, from = mail.from) {
     const m = from.match(/^(.*)<(.+)>$/);
     const r = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST', headers: { 'api-key': mail.brevoKey, 'content-type': 'application/json' },
-      body: JSON.stringify({ sender: { name: (m?.[1] ?? 'Noveniqe').trim(), email: (m?.[2] ?? from).trim() }, to: [{ email: to }], subject, textContent: text, htmlContent: html }),
+      body: JSON.stringify({ sender: { name: (m?.[1] ?? 'Noveniqe').trim().replace(/^"|"$/g, ''), email: (m?.[2] ?? from).trim() }, to: [{ email: to }], subject, textContent: text, htmlContent: html,
+        ...(replyTo ? { replyTo: { email: replyTo } } : {}), ...(Object.keys(headers).length ? { headers } : {}) }),
       signal: AbortSignal.timeout(10_000),
     });
     return r.ok;
@@ -38,14 +47,17 @@ export async function sendCode(mail, to, code, brand, from = mail.from) {
 }
 
 // A small SMTP client: implicit TLS on port 465, STARTTLS otherwise, AUTH LOGIN, one message. No dependencies.
-export function smtpSend(o, { from, to, subject, text, html }) {
+export function smtpSend(o, { from, to, subject, text, html, replyTo, headers = {} }) {
   const addr = (s) => (String(s).match(/<([^>]+)>/)?.[1] ?? String(s)).trim();
   const enc = (s) => /^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${Buffer.from(s).toString('base64')}?=`;
   const name = String(from).match(/^(.*)<[^>]+>$/)?.[1]?.trim().replace(/^"|"$/g, '');
   const b = 'b' + randomBytes(12).toString('hex'), host = addr(from).split('@')[1] || 'localhost';
   const body = [
     `From: ${name ? `"${enc(name)}" ` : ''}<${addr(from)}>`, `To: <${to}>`, `Subject: ${enc(subject)}`, `Date: ${new Date().toUTCString()}`,
-    `Message-ID: <${randomBytes(12).toString('hex')}@${host}>`, 'MIME-Version: 1.0', `Content-Type: multipart/alternative; boundary="${b}"`, '',
+    `Message-ID: <${randomBytes(12).toString('hex')}@${host}>`,
+    ...(replyTo ? [`Reply-To: <${addr(replyTo)}>`] : []),
+    ...Object.entries(headers).filter(([k, v]) => /^[A-Za-z][A-Za-z0-9-]{0,60}$/.test(k) && !/[\r\n]/.test(String(v))).map(([k, v]) => `${k}: ${v}`),
+    'MIME-Version: 1.0', `Content-Type: multipart/alternative; boundary="${b}"`, '',
     `--${b}`, 'Content-Type: text/plain; charset=utf-8', 'Content-Transfer-Encoding: base64', '', ...b64(text),
     `--${b}`, 'Content-Type: text/html; charset=utf-8', 'Content-Transfer-Encoding: base64', '', ...b64(html), `--${b}--`, '',
   ].join('\r\n');

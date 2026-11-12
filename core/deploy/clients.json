@@ -101,6 +101,14 @@
       "guests": false,
       "share_email": true,
       "color": "#FF5B2E",
+      "email": {
+        "on": false,
+        "address": "",
+        "monthly": 3000,
+        "lists": {
+          "news": { "name": "SavvyMe tips and news", "double_opt_in": true, "public": false }
+        }
+      },
       "home": "https://savvyme.amaete.com",
       "redirect_uris": [
         "https://savvyme.amaete.com/api/onyx/return",
