@@ -135,7 +135,7 @@ export function makeAccounts({ pb, cfg }) {
       const u = await A.user(userId);
       await pb.update('users', u.id, { account_status: 'deleted', display_name: 'Deleted player', handle: '', verified: false,
         email: `d${u.id.toLowerCase()}@${GUEST_DOMAIN}` });
-      for (const c of ['nv_sessions', 'nv_identities', 'nv_roles', 'nv_handle_holds']) {
+      for (const c of ['nv_sessions', 'nv_identities', 'nv_roles', 'nv_handle_holds', 'nv_items']) {
         for (const x of await pb.list(c, { filter: `user_id=${q(u.id)}`, perPage: 200 }).catch(() => [])) await pb.remove(c, x.id).catch(() => {});
       }
       const a = await A.account(u.id);

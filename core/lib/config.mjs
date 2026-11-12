@@ -1,6 +1,8 @@
 // Core's settings, all from the environment (on the server: /etc/novenique/core.env, made by deploy/install.sh).
 // Games ("clients") are listed in clients.json (no secrets); each client's secret is only on the server, in
 // <CORE_CLIENT_SECRETS_DIR>/<id>.env as NOVENIQUE_CLIENT_SECRET=..., and Core keeps only its hash in memory.
+// A product hosted somewhere else (a Vercel site) keeps its secret in its own host's settings instead: clients.json then
+// carries only the secret's SHA-256 (`secret_sha256`), which is safe to publish because the secret is 32 random bytes.
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { sha } from './util.mjs';
@@ -51,6 +53,7 @@ function readClients(env) {
   return Object.fromEntries(list.map((c) => {
     const f = join(dir, `${c.id}.env`);
     const line = existsSync(f) ? readFileSync(f, 'utf8').match(/^NOVENIQUE_CLIENT_SECRET=(.+)$/m) : null;
-    return [c.id, { ...c, secretHash: line ? sha(line[1].trim()) : null }];
+    const hash = /^[0-9a-f]{64}$/.test(c.secret_sha256 ?? '') ? c.secret_sha256 : line ? sha(line[1].trim()) : null;
+    return [c.id, { ...c, secretHash: hash }];
   }));
 }
