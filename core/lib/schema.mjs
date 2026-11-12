@@ -42,6 +42,10 @@ export const TABLES = {
   nv_passes: [[T('user_id', { required: true, max: 40 }), T('product', { required: true, max: 40 }), T('plan', { max: 20 }), T('sub', { max: 80 }), T('customer', { max: 80 }),
     N('since_ms'), N('until_ms'), B('renews'), N('paid'), T('source', { max: 20 })],
     ['CREATE UNIQUE INDEX idx_nv_passes ON nv_passes (user_id, product)', 'CREATE INDEX idx_nv_passes_sub ON nv_passes (sub)']],
+  // things a person saves in a product (a Prebuild build, a Remodel room): lib/items.mjs; data is the product's own JSON
+  nv_items: [[T('user_id', { required: true, max: 40 }), T('product', { required: true, max: 40 }), T('kind', { max: 30 }), T('name', { max: 120 }),
+    { name: 'data', type: 'json', maxSize: 1_100_000 }, T('thumb', { max: 90_000 }), N('size')],
+    ['CREATE INDEX idx_nv_items_owner ON nv_items (user_id, product)']],
   // every Stripe event already used, so a retried webhook changes nothing
   nv_stripe_events: [[T('event_id', { required: true, max: 120 }), T('type', { max: 60 }), T('product', { max: 40 }), T('user_id', { max: 40 })],
     ['CREATE UNIQUE INDEX idx_nv_stripe_events ON nv_stripe_events (event_id)']],

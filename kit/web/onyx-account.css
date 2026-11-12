@@ -1,0 +1,88 @@
+/* Onyx kit: the account button, sheet and toast. Colours come from the page (see onyx-account.js). */
+.ox-root, .ox-toast, .ox-button {
+  --_bg: var(--ox-bg, var(--paper, #fbf8f2)); --_ink: var(--ox-ink, var(--ink, #18202b)); --_soft: var(--ox-soft, var(--soft, #5b6472));
+  --_line: var(--ox-line, var(--line, #d9d2c4)); --_acc: var(--ox-accent, var(--accent, #f2b705)); --_acc-ink: var(--ox-accent-ink, var(--accent-ink, #1a1400));
+  --_r: var(--ox-radius, 18px);
+}
+.ox-root { position: fixed; inset: 0; z-index: 9000; display: none; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(8, 10, 14, .55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.ox-root.on { display: flex; animation: ox-fade .18s ease-out; }
+.ox-card { position: relative; width: min(420px, 100%); max-height: calc(100dvh - 40px); overflow: auto; background: var(--_bg); color: var(--_ink);
+  border: 1px solid var(--_line); border-radius: var(--_r); padding: 28px 26px 22px; box-shadow: 0 30px 80px rgba(0, 0, 0, .35); animation: ox-up .22s cubic-bezier(.2, .8, .2, 1); }
+.ox-card.ox-wide { width: min(760px, 100%); }
+.ox-card h2 { margin: 0 0 6px; font-size: 22px; line-height: 1.2; font-weight: 800; letter-spacing: -.01em; }
+.ox-sub { margin: 0 0 18px; color: var(--_soft); }
+.ox-x { position: absolute; top: 10px; right: 12px; width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; color: var(--_soft); font-size: 26px; line-height: 1; cursor: pointer; }
+.ox-x:hover { background: color-mix(in srgb, var(--_ink) 8%, transparent); color: var(--_ink); }
+.ox-btn { display: flex; width: 100%; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 18px; border-radius: 12px;
+  border: 1.5px solid var(--_line); background: transparent; color: var(--_ink); font: inherit; font-weight: 700; cursor: pointer; transition: transform .12s, background .15s; }
+.ox-btn:hover { background: color-mix(in srgb, var(--_ink) 6%, transparent); }
+.ox-btn:active { transform: scale(.985); }
+.ox-btn.ox-main { background: var(--_acc); color: var(--_acc-ink); border-color: var(--_acc); }
+.ox-btn.ox-main:hover { filter: brightness(1.06); }
+.ox-btn.ox-ghost { border-color: transparent; color: var(--_soft); }
+.ox-btn svg { width: 20px; height: 20px; }
+.ox-btn:disabled, .ox-busy { opacity: .6; pointer-events: none; }
+.ox-busy::after { content: ""; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: ox-spin .7s linear infinite; }
+.ox-or { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: var(--_soft); font-size: 13px; }
+.ox-or::before, .ox-or::after { content: ""; flex: 1; height: 1px; background: var(--_line); }
+.ox-form { display: grid; gap: 12px; }
+.ox-lab { display: grid; gap: 6px; font-size: 13px; font-weight: 700; color: var(--_soft); }
+.ox-lab input, .ox-at { width: 100%; box-sizing: border-box; min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--_line);
+  background: color-mix(in srgb, var(--_bg) 70%, var(--_ink) 4%); color: var(--_ink); font: inherit; font-size: 16px; font-weight: 500; }
+.ox-lab input:focus, .ox-at:focus-within { outline: none; border-color: var(--_acc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--_acc) 30%, transparent); }
+.ox-at { display: flex; align-items: center; gap: 2px; }
+.ox-at i { font-style: normal; color: var(--_soft); }
+.ox-at input { border: 0; padding: 0; min-height: 44px; background: transparent; box-shadow: none !important; }
+.ox-code { letter-spacing: .5em; font-size: 22px !important; text-align: center; font-variant-numeric: tabular-nums; }
+.ox-err { margin: 0; color: #d2462b; font-weight: 600; font-size: 14px; }
+.ox-fine { margin: 14px 0 0; color: var(--_soft); font-size: 13px; text-align: center; }
+.ox-link { border: 0; background: none; padding: 0; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ox-plans { display: grid; gap: 10px; margin-bottom: 14px; }
+.ox-plan { display: block; cursor: pointer; }
+.ox-plan input { position: absolute; opacity: 0; }
+.ox-plan span { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 14px 16px; border: 1.5px solid var(--_line); border-radius: 14px; }
+.ox-plan span small { grid-column: 1 / -1; color: var(--_soft); font-size: 13px; }
+.ox-plan em { font-style: normal; font-weight: 800; font-size: 20px; }
+.ox-plan em small { font-size: 13px; color: var(--_soft); font-weight: 600; }
+.ox-plan input:checked + span { border-color: var(--_acc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--_acc) 28%, transparent); }
+.ox-plan input:focus-visible + span { outline: 2px solid var(--_acc); outline-offset: 2px; }
+.ox-who { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.ox-who h2 { margin: 0; } .ox-who .ox-sub { margin: 0; }
+.ox-av { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--_acc); color: var(--_acc-ink); font-weight: 800; font-size: 14px; flex: none; }
+.ox-who .ox-av { width: 52px; height: 52px; font-size: 22px; }
+.ox-status { display: grid; gap: 2px; padding: 14px 16px; border-radius: 14px; border: 1.5px dashed var(--_line); margin-bottom: 16px; }
+.ox-status.on { border-style: solid; border-color: var(--_acc); background: color-mix(in srgb, var(--_acc) 12%, transparent); }
+.ox-status span { color: var(--_soft); font-size: 14px; }
+.ox-acts { display: grid; gap: 10px; }
+.ox-meter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 4px 0 16px; color: var(--_soft); font-size: 14px; }
+.ox-meter i { flex: 1; min-width: 80px; height: 6px; border-radius: 3px; background: var(--_line); position: relative; overflow: hidden; }
+.ox-meter i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--w); background: var(--_acc); border-radius: 3px; }
+.ox-empty { color: var(--_soft); padding: 24px 0 8px; text-align: center; }
+.ox-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+.ox-grid li { position: relative; border: 1.5px solid var(--_line); border-radius: 14px; overflow: hidden; }
+.ox-open { display: grid; width: 100%; gap: 2px; padding: 0 0 12px; border: 0; background: transparent; color: var(--_ink); font: inherit; text-align: left; cursor: pointer; }
+.ox-open img, .ox-ph { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: color-mix(in srgb, var(--_ink) 7%, transparent); margin-bottom: 8px; }
+.ox-open b, .ox-open small { padding: 0 12px; } .ox-open small { color: var(--_soft); font-size: 12px; }
+.ox-open:hover b { text-decoration: underline; }
+.ox-del { position: absolute; top: 8px; right: 8px; padding: 5px 10px; border: 0; border-radius: 999px; background: rgba(0, 0, 0, .55); color: #fff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; opacity: 0; transition: opacity .15s; }
+.ox-grid li:hover .ox-del, .ox-del:focus-visible, .ox-del[data-sure="1"] { opacity: 1; }
+.ox-del[data-sure="1"] { background: #d2462b; }
+@media (hover: none) { .ox-del { opacity: 1; } }
+.ox-toast { position: fixed; left: 50%; bottom: 28px; z-index: 9100; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; max-width: calc(100vw - 32px);
+  padding: 12px 18px; border-radius: 12px; background: var(--_ink); color: var(--_bg); font: 600 14px/1.3 system-ui, -apple-system, sans-serif; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); transition: .25s; }
+.ox-toast.on { opacity: 1; transform: translate(-50%, 0); }
+.ox-button { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+.ox-button svg { width: 20px; height: 20px; }
+.ox-button .ox-av { width: 26px; height: 26px; font-size: 13px; }
+.ox-pro { font-style: normal; font-size: 10px; font-weight: 900; letter-spacing: .06em; padding: 2px 5px; border-radius: 5px; background: var(--_acc); color: var(--_acc-ink); vertical-align: 2px; }
+@media (max-width: 600px) {
+  .ox-root { align-items: flex-end; padding: 0; }
+  .ox-card, .ox-card.ox-wide { width: 100%; max-height: 92dvh; border-radius: var(--_r) var(--_r) 0 0; padding: 26px 20px calc(20px + env(safe-area-inset-bottom)); animation-name: ox-sheet; }
+  .ox-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+}
+@keyframes ox-fade { from { opacity: 0; } }
+@keyframes ox-up { from { opacity: 0; transform: translateY(14px) scale(.98); } }
+@keyframes ox-sheet { from { transform: translateY(100%); } }
+@keyframes ox-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ox-root.on, .ox-card { animation: none; } .ox-toast { transition: none; } }

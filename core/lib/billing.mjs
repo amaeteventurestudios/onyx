@@ -6,7 +6,8 @@
 // For game servers (client id and secret, like the rest of /v1), always about the calling game's own product:
 //   GET  /v1/pass?user_id=        { active, until, renews, manage, plan, sell, plans, price }
 //   GET  /v1/passes               every pass this game has sold (its owner's screen, its leaderboards)
-//   POST /v1/pass/checkout        { user_id, email?, plan? }  -> { url } Stripe Checkout, back to the game's home after
+//   POST /v1/pass/checkout        { user_id, email?, plan?, back? }  -> { url } Stripe Checkout, then back to the game's home
+//                                 (or to `back`, a path on it). A plan with "trial_days" starts with that many free days.
 //   POST /v1/pass/manage          { user_id }                 -> { url } Stripe's billing page
 //   POST /v1/pass/import          { passes: [...], events: [...] }  passes a game sold before Core sold them (kept if longer)
 // For Stripe: POST /stripe/webhook (checkout.session.completed, invoice.paid, customer.subscription.updated/deleted). A game
@@ -64,16 +65,17 @@ export function makeBilling({ cfg, pb, A, fetchImpl = fetch }) {
     const metaOf = (m) => (m && typeof m === 'object' ? m : {});
     let meta = {}, out = null;
     const bySub = async (sub) => (sub ? pb.first('nv_passes', `sub=${q(String(sub))}`) : null);
-    if (ev.type === 'checkout.session.completed' && o.mode === 'subscription' && o.payment_status === 'paid') {
+    if (ev.type === 'checkout.session.completed' && o.mode === 'subscription' && (o.payment_status === 'paid' || o.payment_status === 'no_payment_required')) {
       meta = metaOf(o.metadata);
       const product = productOf(meta.game), id = meta.uid || o.client_reference_id;
       if (product && SAFE.test(String(id))) {
         const c = Object.values(cfg.clients).find((x) => x.product === product), planId = meta.plan || 'year';
         const pl = plansOf(c).find((x) => x.id === planId) ?? { interval: 'year', count: 1 };
         const cur = view(await row(id, product)) ?? {};
-        // until the first invoice lands, the pass runs one plan period from now
+        // until the first invoice lands, the pass runs one plan period from now (a free trial: its days)
+        const first = o.payment_status === 'no_payment_required' && pl.trial_days ? (pl.trial_days * DAY + GRACE) : months(pl) * 30.44 * DAY;
         out = { product, id, data: { plan: planId, sub: o.subscription || '', customer: o.customer || cur.customer || '', renews: true, since_ms: cur.since || now,
-          until_ms: Math.max(cur.until || 0, now + months(pl) * 30.44 * DAY), source: 'stripe' } };
+          until_ms: Math.max(cur.until || 0, now + first), source: 'stripe' } };
       }
     } else if (ev.type === 'invoice.paid' || ev.type === 'invoice.payment_succeeded') {
       const sub = o.subscription || o.parent?.subscription_details?.subscription;
@@ -108,13 +110,18 @@ export function makeBilling({ cfg, pb, A, fetchImpl = fetch }) {
     if (!r.ok || !j.url) throw Object.assign(new Error((j.error && j.error.message) || route + ' failed'), { status: 502 });
     return j.url;
   }
-  async function checkout(c, userId, email, planId = 'year') {
+  async function checkout(c, userId, email, planId = 'year', back = '') {
     const pl = onPlans(c).find((x) => x.id === planId);
     if (!pl) throw Object.assign(new Error('No such plan'), { status: 400 });
     const cur = view(await row(userId, c.product));
     const f = new URLSearchParams({ mode: 'subscription', client_reference_id: userId, 'metadata[uid]': userId, 'metadata[plan]': planId, 'metadata[game]': c.product,
       'subscription_data[metadata][uid]': userId, 'subscription_data[metadata][plan]': planId, 'subscription_data[metadata][game]': c.product,
-      'line_items[0][quantity]': '1', allow_promotion_codes: 'true', success_url: `${c.home}/?pass=ok`, cancel_url: `${c.home}/?pass=cancel` });
+      'line_items[0][quantity]': '1', allow_promotion_codes: 'true' });
+    // back: a path on the product's own site (never another site), with ?pass=ok or ?pass=cancel added
+    const path = /^\/(?!\/)[A-Za-z0-9/_.-]{0,200}$/.test(String(back)) ? String(back) : '/';
+    f.set('success_url', `${c.home}${path}?pass=ok`); f.set('cancel_url', `${c.home}${path}?pass=cancel`);
+    // a trial is only for someone who never held this pass, so cancelling and starting again doesn't reset it
+    if (pl.trial_days > 0 && !cur) f.set('subscription_data[trial_period_days]', String(Math.min(pl.trial_days, 60)));
     // the product made in Stripe's catalog when its Price ID is set; otherwise the same plan described inline
     if (pl.price) f.set('line_items[0][price]', pl.price);
     else for (const [k, v] of Object.entries({ currency: 'usd', unit_amount: String(pl.cents), 'recurring][interval': pl.interval, 'recurring][interval_count': String(pl.count || 1),
@@ -129,7 +136,8 @@ export function makeBilling({ cfg, pb, A, fetchImpl = fetch }) {
     if (!path.startsWith('/v1/pass')) return null;
     const uid = String(req.method === 'GET' ? url.searchParams.get('user_id') ?? '' : form.user_id ?? '');
     if (req.method === 'GET' && path === '/v1/pass') {
-      const p = await passOf(uid, c.product), plans = onPlans(c).map((pl) => ({ id: pl.id, name: pl.name, price: usd(pl.cents), months: months(pl), monthly: usd(Math.round(pl.cents / months(pl))) }));
+      const p = await passOf(uid, c.product), plans = onPlans(c).map((pl) => ({ id: pl.id, name: pl.name, price: usd(pl.cents), months: months(pl), monthly: usd(Math.round(pl.cents / months(pl))),
+        trial_days: pl.trial_days || 0 }));
       const y = plans.find((x) => x.id === 'year') || plans[0];
       return json(res, 200, { active: !!p, until: p ? p.until : null, renews: !!(p && p.renews), manage: !!(p && p.customer), plan: p ? p.plan : null,
         sell: sells(c), plans, price: y ? { monthly: y.monthly, yearly: y.price } : null });
@@ -143,12 +151,13 @@ export function makeBilling({ cfg, pb, A, fetchImpl = fetch }) {
       if (!sells(c)) return fail(res, 503, 'NOT_ON_SALE', 'The pass opens very soon.');
       const id = SAFE.test(uid) ? await A.resolve(uid) : null, u = id ? await A.active(id) : null;
       if (!u) return fail(res, 404, 'NOT_FOUND', 'Unknown user');
-      return json(res, 200, { url: await checkout(c, id, form.email || (String(u.email ?? '').includes('.invalid') ? '' : u.email), String(form.plan || 'year')) });
+      return json(res, 200, { url: await checkout(c, id, form.email || (String(u.email ?? '').includes('.invalid') ? '' : u.email), String(form.plan || 'year'), String(form.back || '')) });
     }
     if (req.method === 'POST' && path === '/v1/pass/manage') {
       const id = SAFE.test(uid) ? await A.resolve(uid) : null, p = id ? view(await row(id, c.product)) : null;
       if (!p || !p.customer) return fail(res, 404, 'NOT_FOUND', 'No subscription');
-      return json(res, 200, { url: await stripe('billing_portal/sessions', new URLSearchParams({ customer: p.customer, return_url: `${c.home}/` })) });
+      const path = /^\/(?!\/)[A-Za-z0-9/_.-]{0,200}$/.test(String(form.back || '')) ? String(form.back) : '/';
+      return json(res, 200, { url: await stripe('billing_portal/sessions', new URLSearchParams({ customer: p.customer, return_url: `${c.home}${path}` })) });
     }
     if (req.method === 'POST' && path === '/v1/pass/import') {
       let kept = 0;
