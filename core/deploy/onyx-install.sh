@@ -110,7 +110,7 @@ sudo systemctl restart onyx-pb
 for i in $(seq 1 60); do curl -fsS -o /dev/null "http://127.0.0.1:$PB_PORT/api/health" 2>/dev/null && break; sleep 1; done
 
 # the "amaete" tenant, and the first owner: whoever is Super Administrator on the games' site (asked once)
-OWN=$(sudo "$NODE_DIR/bin/node" "$APP/deploy/onyx-seed.mjs" "$ENVF" "$GAMES_ENV" /etc/palasora.env || true)
+OWN=$(sudo "$NODE_DIR/bin/node" "$APP/deploy/onyx-seed.mjs" "$ENVF" "$GAMES_ENV" /etc/palasora.env)   # stops here if the tenant cannot be made
 if [ -n "$OWN" ] && ! sudo grep -q '^CORE_OWNER_EMAILS=.' "$ENVF"; then setkv CORE_OWNER_EMAILS "$OWN"; echo "First owner set from the games' Super Administrator."; fi
 
 # ---- the accounts service ----

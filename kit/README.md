@@ -31,7 +31,8 @@ in `/onyx/` and the endpoint in `api/account.mjs` + `api/_onyx.mjs` (`onyx-serve
      change is merged (Onyx's Stripe account; no Price ID needed, the plan is described inline).
    - Hosted off the Onyx server (Vercel)? Make a secret of 32 random bytes, put it in the host's settings as
      `ONYX_CLIENT_SECRET`, and put only its SHA-256 in clients.json as `secret_sha256`. Otherwise the deploy makes one on the server.
-2. In the product: `api/account.js` = `createOnyxHandler({ clientId, site, after })`, and on each page
+2. In the product: `api/account.js` = `createOnyxHandler({ clientId, site, after })` (a non-game product also passes
+   `core: 'https://accounts.amaete.com'`; the default is the games' site), and on each page
    `Onyx.init({ api: '/api/account', brand, items: 'builds', button: '#account', onOpen })`. Save with
    `Onyx.save({ kind, name, data, thumb })`; open the shelf with `Onyx.library()`; sell with `Onyx.upgrade('month')`.
 3. Put `if (!Onyx.gate("why")) return;` at the top of a Pro-only tool: it lets Pro (and everyone while nothing is on sale) through and opens the Pro sheet for the rest.

@@ -24,11 +24,11 @@ if (!have) await onyx('POST', '/api/collections/tenants/records', { slug, name: 
 console.error(`Onyx store: tenant "${slug}" ${have ? 'ready' : 'made'}.`);
 
 // the games' Super Administrator(s), read with Palasora's service account (only when this site has no owner set yet)
-if (!env.CORE_OWNER_EMAILS && gamesEnv && palEnv && existsSync(gamesEnv) && existsSync(palEnv)) {
+if (!env.CORE_OWNER_EMAILS && gamesEnv && palEnv && existsSync(gamesEnv) && existsSync(palEnv)) try {   // optional: never stops the deploy
   const pal = readEnvFile(palEnv), games = readEnvFile(gamesEnv);
   const g = await client(games.PB_URL || 'http://127.0.0.1:8190', pal.PB_SERVICE_EMAIL, pal.PB_SERVICE_PASSWORD);
   const rows = (await g('GET', `/api/collections/nv_roles/records?perPage=20&filter=${encodeURIComponent("product='platform' && role='super_admin'")}`)).items;
   const emails = [];
   for (const r of rows) { const u = await g('GET', `/api/collections/users/records/${r.user_id}`).catch(() => null); if (u?.email) emails.push(String(u.email).toLowerCase()); }
   process.stdout.write(emails.join(','));
-}
+} catch (e) { console.error(`Onyx store: could not read the games' Super Administrator (${e.message}); set CORE_OWNER_EMAILS by hand.`); }

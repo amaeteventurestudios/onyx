@@ -64,10 +64,11 @@
       lastFocus = document.activeElement;
       [...document.body.children].forEach((el) => { if (el !== root && !el.inert) { el.inert = true; el.dataset.oxInert = ''; } });   // Tab stays in the sheet
     }
-    root.innerHTML = `<div class="ox-card ${cls || ''}"><button class="ox-x" aria-label="Close">×</button>${html}</div>`;
+    root.innerHTML = `<div class="ox-card ${cls || ''}" tabindex="-1"><button class="ox-x" aria-label="Close">×</button>${html}</div>`;
     root.querySelector('.ox-x').onclick = close;
     root.classList.add('on');
-    const f = root.querySelector('input,button.ox-main'); if (f) setTimeout(() => f.focus({ preventScroll: true }), 30);
+    const f = root.querySelector('input,button.ox-main') || root.querySelector('.ox-card');   // every sheet takes focus
+    setTimeout(() => f.focus({ preventScroll: true }), 30);
     return root.querySelector('.ox-card');
   }
   function close() {
@@ -241,7 +242,11 @@
     card.querySelector('[data-a=lib]').onclick = () => library();
     const a = (k, f) => { const b = card.querySelector(`[data-a=${k}]`); if (b) b.onclick = f; };
     a('manage', manage); a('pro', () => upgrade());
-    a('out', async () => { await call('signout', {}); O.me = null; await me(true); close(); toast('Signed out'); });
+    a('out', async () => {
+      const r = await call('signout', {}); O.me = null; await me(true);
+      if (!r.ok || O.me.signed_in) return toast('Could not sign out. Try again.');
+      close(); toast('Signed out');
+    });
   }
 
   // ---------- the button and the toast ----------

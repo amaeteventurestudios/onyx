@@ -15,7 +15,7 @@ export function makeConsole({ cfg, pb, A }) {
   /** Everyone on this site with what we know about them, newest first. Small sites only (a few thousand people). */
   async function everyone() {
     const realm = await A.realm();
-    const all = async (coll, filter, fields, max = 50) => {
+    const all = async (coll, filter, fields, max = 5000) => {   // every row (200 a page)
       const out = [];
       for (let page = 1; page <= max; page++) {
         const b = await pb.list(coll, { filter, sort: '-created', perPage: 200, page, fields });
@@ -28,10 +28,11 @@ export function makeConsole({ cfg, pb, A }) {
     const via = {};
     for (const m of await all('nv_identities', '', 'user_id,provider,last_used_at')) (via[m.user_id] ??= new Set()).add(m.provider);
     const used = {}, last = {}, signins = [];
-    for (const e of await all('audit_events', `tenant_id=${q(realm)} && action='auth.sign_in'`, 'object_id,metadata_safe,created', 50)) {
+    // a sign-in, or opening another product while already signed in (auth.product_opened)
+    for (const e of await all('audit_events', `tenant_id=${q(realm)} && (action='auth.sign_in' || action='auth.product_opened')`, 'object_id,metadata_safe,created')) {
+      if (!last[e.object_id] || e.created > last[e.object_id]) last[e.object_id] = e.created;
       const c = e.metadata_safe?.client; if (!c || c === '_self') continue;
       (used[e.object_id] ??= new Set()).add(c);
-      if (!last[e.object_id] || e.created > last[e.object_id]) last[e.object_id] = e.created;
       signins.push({ client: c, at: e.created });
     }
     const people = [];

@@ -59,8 +59,9 @@ product's handoff); each one is on the list to move into Onyx.
 
 ## Plug a new product in
 
-1. **Accounts and payments.** Add the product to `core/deploy/clients.json` (id, name, home, redirect URIs, plans), then
-   follow `kit/README.md`. A product on another host (Vercel, Contabo) keeps its own server and stores only the SHA-256
+1. **Accounts and payments.** Add the product to `core/deploy/onyx-clients.json` (accounts.amaete.com) if it is not a
+   game, or to `core/deploy/clients.json` (accounts.noveniqe.com) if it is a game (id, name, home, redirect URIs, plans),
+   then follow `kit/README.md`; the same file holds its `email` block. A product on another host (Vercel, Contabo) keeps its own server and stores only the SHA-256
    of its client secret here. A product that already has its own accounts (SavvyMe, Isoteh) sets `"share_email": true`
    so it receives the verified email and can find existing accounts by it; it signs people in server to server
    (`/v1/signin/email/*`, `/v1/signin/profile`, and `/authorize` with `via=google` for Google). Copy `isoteh/lib/onyx.mjs`

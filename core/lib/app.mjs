@@ -172,6 +172,7 @@ export function makeCore(cfg, deps = {}) {
     const s = await session(req);
     if (s && p.get('prompt') !== 'login') {
       if (f.g && f.g !== s.user.id) { writeFlow(res, { ...f, pm: f.g, g: null }); return go(res, '/merge'); }
+      if (f.c && f.c !== '_self') await A.audit(s.user.id, 'auth.product_opened', s.user.id, { client: f.c });   // the console counts it
       return finish(req, res, f);
     }
     return go(res, '/signin');
@@ -577,7 +578,9 @@ export function makeCore(cfg, deps = {}) {
     const e = String(email ?? '').toLowerCase();
     if (!e || !cfg.owners?.includes(e)) return;
     if (await pb.first('nv_roles', "product='platform' && role='super_admin'")) return;
-    await pb.create('nv_roles', { user_id: userId, product: 'platform', role: 'super_admin', granted_by: 'owner-setting' });
+    const mine = (await A.roles(userId)).find((r) => r.product === 'platform');   // one platform row per person
+    if (mine) await pb.update('nv_roles', mine.id, { role: 'super_admin', granted_by: 'owner-setting' });
+    else await pb.create('nv_roles', { user_id: userId, product: 'platform', role: 'super_admin', granted_by: 'owner-setting' });
     await A.audit('system', 'access.role_granted', userId, { product: 'platform', role: 'super_admin', via: 'CORE_OWNER_EMAILS' }, 'system');
   }
 
