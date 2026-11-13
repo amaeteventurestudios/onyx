@@ -60,7 +60,10 @@
       root.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); e.stopPropagation(); });   // the page's own shortcuts wait
       document.body.appendChild(root);
     }
-    if (!root.classList.contains('on')) lastFocus = document.activeElement;
+    if (!root.classList.contains('on')) {
+      lastFocus = document.activeElement;
+      [...document.body.children].forEach((el) => { if (el !== root && !el.inert) { el.inert = true; el.dataset.oxInert = ''; } });   // Tab stays in the sheet
+    }
     root.innerHTML = `<div class="ox-card ${cls || ''}"><button class="ox-x" aria-label="Close">×</button>${html}</div>`;
     root.querySelector('.ox-x').onclick = close;
     root.classList.add('on');
@@ -69,7 +72,8 @@
   }
   function close() {
     const p = O.pending; O.pending = null; if (p) p(false);   // a sign-in someone walked away from answers no
-    if (!root) return; root.classList.remove('on'); root.innerHTML = ''; if (lastFocus && lastFocus.focus) lastFocus.focus();
+    if (!root) return; root.classList.remove('on'); root.innerHTML = '';
+    document.querySelectorAll('[data-ox-inert]').forEach((el) => { el.inert = false; delete el.dataset.oxInert; }); if (lastFocus && lastFocus.focus) lastFocus.focus();
   }
   const err = (card, msg) => { const e = card.querySelector('.ox-err'); if (e) { e.textContent = msg || ''; e.hidden = !msg; } };
   const busy = (btn, on) => { if (btn) { btn.disabled = on; btn.classList.toggle('ox-busy', on); } };
@@ -92,6 +96,7 @@
         busy(btn, true); err(card, '');
         const r = await call('email-start', { email }).catch(() => ({ msg: 'No connection. Try again.' }));
         busy(btn, false);
+        if (O.pending !== resolve) return;   // closed while we waited
         if (!r.ok) return err(card, r.msg || 'Something went wrong. Try again.');
         codeStep(email, r.body.masked || email);
       };

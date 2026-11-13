@@ -52,8 +52,15 @@
     return loading;
   }
 
-  let busy = null;
-  function check(x) { if (!busy) busy = run(sceneOf(x)).finally(() => { busy = null; }); return busy; }
+  let busy = null, busyScene = null;
+  function check(x) {   // one check at a time; a different scene waits its turn and gets its own answer
+    const scene = sceneOf(x);
+    if (busy && busyScene === scene) return busy;
+    const p = (busy || Promise.resolve()).catch(() => {}).then(() => run(scene));
+    busy = p; busyScene = scene;
+    p.finally(() => { if (busy === p) { busy = null; busyScene = null; } }).catch(() => {});
+    return p;
+  }
   async function run(scene) {
     try { if (window.self !== window.top) return true; } catch (e) { return true; }
     const q = new URLSearchParams(location.search);
