@@ -22,8 +22,11 @@
 
   async function call(act, body, method) {
     const m = method || (body ? 'POST' : 'GET');
-    const r = await fetch(O.api + (O.api.includes('?') ? '&' : '?') + 'do=' + act, { method: m, credentials: 'same-origin',
-      headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+    let r;
+    try {
+      r = await fetch(O.api + (O.api.includes('?') ? '&' : '?') + 'do=' + act, { method: m, credentials: 'same-origin',
+        headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+    } catch (e) { return { status: 0, ok: false, body: {}, msg: 'No connection. Try again.' }; }
     let j = {}; try { j = await r.json(); } catch (e) { /* empty */ }
     return { status: r.status, ok: r.ok, body: j, msg: (j.error && j.error.message) || '' };
   }
@@ -54,6 +57,7 @@
       root = document.createElement('div'); root.className = 'ox-root'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true');
       root.addEventListener('click', (e) => { if (e.target === root) close(); });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && root && root.classList.contains('on')) close(); });
+      root.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); e.stopPropagation(); });   // the page's own shortcuts wait
       document.body.appendChild(root);
     }
     if (!root.classList.contains('on')) lastFocus = document.activeElement;
@@ -134,6 +138,11 @@
   async function afterSignIn(b, keep) {
     if (b.needs_profile) return profileStep(b.ticket, b.suggest, keep);
     await me(true);
+    if (!O.me.signed_in) {   // e.g. this email already has an account that has to be joined first
+      const card = root && root.querySelector('.ox-card');
+      if (card) err(card, b.merge_needed ? 'This email already has an account. Sign in with Google, or try again later.' : 'Sign-in did not finish. Please try again.');
+      return;
+    }
     O.pending = null; close();
     toast(`Signed in as ${(O.me.user && (O.me.user.display_name || '@' + O.me.user.handle)) || 'you'}`);
     if (keep) keep(true);
@@ -257,7 +266,10 @@
     ['profile', 'signin', 'pass'].forEach((k) => q.delete(k));
     if (q.toString() !== was) history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash);
     me(true).then(() => {
-      if (profile) profileStep(profile, '', null);
+      if (profile) {   // closing the sheet answers no; the page hears 'onyx:profile' either way
+        new Promise((r) => { O.pending = r; profileStep(profile, '', r); })
+          .then((ok) => window.dispatchEvent(new CustomEvent('onyx:profile', { detail: { ok: !!ok } })));
+      }
       else if (signin === 'ok') toast('Signed in');
       else if (signin === 'failed') toast('Sign-in did not finish. Please try again.');
       if (passed === 'ok') { sheet(`<h2>Welcome to ${esc(O.brand)} Pro</h2><p class="ox-sub">Every tool is open and your ${esc(O.items)} have no limit. It can take a few seconds to show.</p><button class="ox-btn ox-main" type="button">Start building</button>`).querySelector('.ox-main').onclick = close; setTimeout(() => me(true), 4000); }

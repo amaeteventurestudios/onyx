@@ -70,7 +70,9 @@
     if (m.off) return true;                              // accounts not switched on here yet, or not answering
     if (m.signed_in) { store.set(IN, '1'); return true; }
     if (back && q.get('profile')) {                      // the kit is asking for a name: wait for it
-      return new Promise((ok) => window.addEventListener('onyx:change', (e) => { if (e.detail && e.detail.signed_in) { store.set(IN, '1'); ok(true); } }));
+      return new Promise((ok) => window.addEventListener('onyx:profile', (e) => {
+        if (e.detail && e.detail.ok) { store.set(IN, '1'); ok(true); } else { location.href = home; ok(false); }
+      }, { once: true }));
     }
     if (back && (list.includes(scene) || list.length < free)) return true;
     const ok = await O.signIn(`You've had your free ${free === 1 ? 'scene' : free + ' scenes'}. Sign in to open every one. It's free, and one account works across the Amaete sites.`);

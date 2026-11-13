@@ -93,6 +93,7 @@ function createOnyxHandler(opts) {
       if (req.method === 'GET' && act === 'me') {
         const s = session(req);
         const p = await call('GET', `/v1/pass?user_id=${s ? s.u : 'x'.repeat(15)}`);
+        if (p.status !== 200 && p.status !== 404) throw Object.assign(new Error('pass ' + p.status), { status: 503 });   // the page lets people through
         const base = { plans: p.body.plans || [], sell: !!p.body.sell };
         if (!s) return send(res, 200, { signed_in: false, ...base });
         if (p.status === 404) { addCookie(res, cookieLine('', '', 0)); return send(res, 200, { signed_in: false, ...base }); }
