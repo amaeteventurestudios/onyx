@@ -28,6 +28,11 @@ export function loadConfig(env = process.env, overrides = {}) {
     port: Number(env.CORE_PORT ?? 8200), host: env.CORE_HOST ?? '127.0.0.1',
     pb: { url: env.PB_URL ?? 'http://127.0.0.1:8190', email: env.PB_CORE_EMAIL ?? '', password: env.PB_CORE_PASSWORD ?? '' },
     realmSlug: env.CORE_REALM_SLUG ?? 'palavva',
+    // the accounts site's own name: Noveniqe (games) or Amaete (the studio's sites and products on Onyx)
+    brand: env.CORE_BRAND || 'Noveniqe',
+    // people who become Super Administrator the first time they sign in with this verified email, while nobody holds that role
+    // yet (a new accounts site has nobody to grant the first one)
+    owners: String(env.CORE_OWNER_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
     sessionDays: Number(env.CORE_SESSION_DAYS ?? 30),
     clients,
     google: env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET ? { id: env.GOOGLE_CLIENT_ID, secret: env.GOOGLE_CLIENT_SECRET,

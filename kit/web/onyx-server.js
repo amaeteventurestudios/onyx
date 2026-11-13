@@ -28,7 +28,11 @@ const PATH = /^\/(?!\/)[A-Za-z0-9/_.-]{0,200}$/;
 function createOnyxHandler(opts) {
   const o = { core: 'https://accounts.noveniqe.com', cookie: 'onyx_s', days: 30, after: '/', ...opts };
   const secret = () => o.secret || process.env.ONYX_CLIENT_SECRET || '';
-  const core = () => (process.env.ONYX_CORE_URL || o.core).replace(/\/$/, '');
+  const core = () => {   // the client secret only travels over HTTPS (plain HTTP only to this machine, for tests)
+    const u = new URL(process.env.ONYX_CORE_URL || o.core);
+    if (u.protocol !== 'https:' && !(u.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(u.hostname))) throw new Error('ONYX_CORE_URL must be https');
+    return u.origin + u.pathname.replace(/\/$/, '');
+  };
   const key = () => crypto.createHmac('sha256', secret()).update('onyx-kit-session').digest();
   const secure = o.site.startsWith('https://');
   const name = (n) => (secure ? '__Host-' : '') + o.cookie + n;
@@ -89,6 +93,7 @@ function createOnyxHandler(opts) {
       if (req.method === 'GET' && act === 'me') {
         const s = session(req);
         const p = await call('GET', `/v1/pass?user_id=${s ? s.u : 'x'.repeat(15)}`);
+        if (p.status !== 200 && p.status !== 404) throw Object.assign(new Error('pass ' + p.status), { status: 503 });   // the page lets people through
         const base = { plans: p.body.plans || [], sell: !!p.body.sell };
         if (!s) return send(res, 200, { signed_in: false, ...base });
         if (p.status === 404) { addCookie(res, cookieLine('', '', 0)); return send(res, 200, { signed_in: false, ...base }); }
@@ -108,7 +113,9 @@ function createOnyxHandler(opts) {
         const back = f ? f.b : o.after, sep = back.includes('?') ? '&' : '?';
         if (!f || url.searchParams.get('state') !== f.s || !url.searchParams.get('code')) return go(res, `${back}${sep}signin=failed`);
         const r = await fetch(core() + '/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: 'Basic ' + Buffer.from(`${o.clientId}:${secret()}`).toString('base64') },
-          body: new URLSearchParams({ grant_type: 'authorization_code', code: url.searchParams.get('code'), redirect_uri: returnUri, code_verifier: f.v }), signal: AbortSignal.timeout(15000) });
+          body: new URLSearchParams({ grant_type: 'authorization_code', code: url.searchParams.get('code'), redirect_uri: returnUri, code_verifier: f.v }), signal: AbortSignal.timeout(15000) })
+          .catch(() => null);   // accounts not answering: back to the page, which lets people through
+        if (!r) return go(res, `${back}${sep}signin=failed`);
         const j = await r.json().catch(() => ({}));
         if (!r.ok || !j.user) return go(res, `${back}${sep}signin=failed`);
         if (j.needs_profile) return go(res, `${back}${sep}profile=${encodeURIComponent(j.ticket)}`);

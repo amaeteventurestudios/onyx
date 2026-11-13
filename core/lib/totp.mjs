@@ -34,7 +34,7 @@ export function verify(secret, code, lastStep = -1, ms = Date.now()) {
   }
   return null;
 }
-export const otpauth = (secret, account) =>
-  `otpauth://totp/${encodeURIComponent('Novenique')}:${encodeURIComponent(account)}?secret=${secret}&issuer=Novenique&algorithm=SHA1&digits=6&period=30`;
+export const otpauth = (secret, account, issuer = 'Novenique') =>
+  `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(account)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
 export const hashRecovery = (c) => createHash('sha256').update(c.replace(/[\s-]/g, '').toLowerCase()).digest('hex');
 export const newRecoveryCodes = (n = 8) => Array.from({ length: n }, () => { const r = randomBytes(5).toString('hex'); return `${r.slice(0, 5)}-${r.slice(5)}`; });

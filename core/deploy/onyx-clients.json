@@ -1,0 +1,77 @@
+{
+  "note": "Products and sites on Onyx's own accounts site (accounts.amaete.com): everything the studio makes that is not a game. Games are in clients.json (accounts.noveniqe.com). Same format; a site hosted off the server keeps its secret in its host's settings (ONYX_CLIENT_SECRET) and only its SHA-256 is here.",
+  "clients": [
+    {
+      "id": "worlds",
+      "name": "Amaete 3D Worlds",
+      "product": "worlds",
+      "guests": false,
+      "color": "#2F6FED",
+      "home": "https://worlds.amaete.com",
+      "secret_sha256": "26d29a2eee0aa72d3f0a62fbeffac0de37aa9a062e6a84d4e4fead5f18a00848",
+      "redirect_uris": [
+        "https://worlds.amaete.com/api/account?do=return"
+      ]
+    },
+    {
+      "id": "afrorama",
+      "name": "Afrorama",
+      "product": "afrorama",
+      "guests": false,
+      "color": "#C8553D",
+      "home": "https://afrorama.amaete.com",
+      "secret_sha256": "3c0e4e9a114ae93418e3bf2e44fae5c17fd5be5b2eaed4dd9ccb477dacd1e113",
+      "redirect_uris": [
+        "https://afrorama.amaete.com/api/account?do=return"
+      ]
+    },
+    {
+      "id": "esp32",
+      "name": "Amaete ESP32 Labs",
+      "product": "esp32",
+      "guests": false,
+      "color": "#0F9F95",
+      "home": "https://esp32.amaete.com",
+      "secret_sha256": "f03c191890d8b7e0ed52af4650396800319ed9dd00a094862747324fdf36c618",
+      "redirect_uris": [
+        "https://esp32.amaete.com/api/account?do=return"
+      ]
+    },
+    {
+      "id": "build",
+      "name": "Amaete Build",
+      "product": "build",
+      "guests": false,
+      "color": "#B5532D",
+      "home": "https://build.amaete.com",
+      "secret_sha256": "36cfde8aba9d95d5299f7e8ffc8584c78d991f345e136734461882f66d3a6874",
+      "redirect_uris": [
+        "https://build.amaete.com/api/account?do=return"
+      ]
+    },
+    {
+      "id": "mathin3d",
+      "name": "Math in 3D",
+      "product": "mathin3d",
+      "guests": false,
+      "color": "#4F5BD5",
+      "home": "https://mathin3d.amaete.com",
+      "secret_sha256": "3bf1cb41a816c3d0fd11f9ba3e390bf09a77e88679c7659bebf3219fec7dad7a",
+      "redirect_uris": [
+        "https://mathin3d.amaete.com/api/account?do=return"
+      ]
+    },
+    {
+      "id": "cutaways",
+      "name": "Amaete Cutaways",
+      "product": "cutaways",
+      "guests": false,
+      "color": "#C0582F",
+      "home": "https://cutaways.amaete.com",
+      "secret_sha256": "9024e4cb1a5ffae6aded28faa3a1da4ca4b640c3e2d6937abbfc205c2e1f6f3e",
+      "redirect_uris": [
+        "https://cutaways.amaete.com/api/account?do=return"
+      ]
+    }
+  ]
+}
