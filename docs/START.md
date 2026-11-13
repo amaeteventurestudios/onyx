@@ -3,6 +3,29 @@
 Read this first whenever someone says "build this on Onyx". It lists what Onyx already does, where the code is, and the
 steps to plug a new product in. A new product should write only what makes it different.
 
+## Two accounts sites: games and everything else (owner, 13 Nov 2026)
+
+Games and the rest never share people. Same code (`core/`), two separate installs, each with its own database and console:
+
+| | Games (Noveniqe) | Everything else (Amaete) |
+| --- | --- | --- |
+| Who | Palasora, Agent Grand Prix, Agent Warfront, Anansora | The 3D sites (3D Worlds, Afrorama, ESP32 Labs, Build, Math in 3D, Cutaways, Teardowns, Sim Factory, Prebyld) and the products (SavvyMe, Isoteh, Prebuild, Remodel, Jisste, CoreTech Media, Cathora) |
+| Address | accounts.noveniqe.com | accounts.amaete.com (onyx.amaete.com opens its console) |
+| Database | Palasora's PocketBase (`users` + `nv_*`) | its own PocketBase, `/var/lib/onyx-pb` (`core/store/pb_migrations`) |
+| Products list | `core/deploy/clients.json` | `core/deploy/onyx-clients.json` |
+| Install | `core/deploy/install.sh`, noveniqe `core-deploy.yml` | `core/deploy/onyx-install.sh`, noveniqe `onyx-accounts-deploy.yml` |
+| Console | accounts.noveniqe.com/console | accounts.amaete.com/console |
+
+The console (`core/lib/console.mjs`) shows every product on that site, how many people signed up on each, and the people:
+name, @handle, email, Google or email code, where they first joined, every product they use, joined and last sign-in, with a
+CSV download. Super and Platform Administrators only, after the second sign-in step. The first Super Administrator of a new
+site is set by `CORE_OWNER_EMAILS` (the install copies the games' Super Administrator).
+
+Moving SavvyMe, Isoteh, Prebuild, Remodel and Jisste from the games' site to accounts.amaete.com is the next step; until then
+they still sign in at accounts.noveniqe.com.
+
+The 3D sites use the kit's gate (`kit/web/onyx-gate.js`): one scene free, then sign in.
+
 ## What every product gets on day one
 
 | Need | Use | Where |

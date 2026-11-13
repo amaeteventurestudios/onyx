@@ -17,6 +17,7 @@ import { makeAccounts } from './accounts.mjs';
 import { makeBilling } from './billing.mjs';
 import { makeItems } from './items.mjs';
 import { makeEmail } from './email.mjs';
+import { makeConsole } from './console.mjs';
 import { sendCode } from './mail.mjs';
 import * as P from './pages.mjs';
 import * as totp from './totp.mjs';
@@ -30,6 +31,8 @@ const FLOW_MINUTES = 30;
 export function makeCore(cfg, deps = {}) {
   const pb = deps.pb ?? makePB(cfg.pb);
   const A = makeAccounts({ pb, cfg });
+  SELF.name = cfg.brand ?? SELF.name; P.setBrand(cfg.brand);
+  const C = makeConsole({ cfg, pb, A });
   const SESSION = cfg.secure ? '__Host-nv_session' : 'nv_session';
   const fetchImpl = deps.fetch ?? fetch;
   const B = makeBilling({ cfg, pb, A, fetchImpl: deps.stripeFetch ?? fetchImpl });
@@ -137,6 +140,7 @@ export function makeCore(cfg, deps = {}) {
     await A.attach(userId, provider, subject, email);
     await startSession(req, res, userId);
     await A.audit(userId, 'auth.sign_in', userId, { provider, client: f.c });
+    await ownerCheck(userId, email);
     return finish(req, res, { ...f, g: null, li: null }, userId);
   }
 
@@ -321,6 +325,7 @@ export function makeCore(cfg, deps = {}) {
     if (!userId) userId = (await A.createMember({ email, name, clientId: client.id })).id;
     await A.attach(userId, provider, subject, email);
     await A.audit(userId, 'auth.sign_in', userId, { provider, client: client.id, here: true });
+    await ownerCheck(userId, email);
     return doneHere(client, userId, []);
   }
   async function doneHere(client, userId, mergedFrom) {
@@ -452,14 +457,14 @@ export function makeCore(cfg, deps = {}) {
       methods: methods.map((m) => (m.provider === 'google' ? `Google${m.email ? ' (' + maskEmail(m.email) + ')' : ''}` : `Email code (${maskEmail(m.subject)})`)),
       sessions: sessions.map((x) => ({ id: x.id, agent: deviceName(x.agent), when: `last seen ${String(x.last_seen_at).slice(0, 16)} UTC`, current: x.id === s.id })),
       roles: roles.map((r) => (['moderator', 'player'].includes(r.role) ? `${ROLES[r.role].name} · ${r.product === 'platform' ? 'every game' : cfg.clients[r.product]?.name ?? r.product}` : ROLES[r.role]?.name ?? r.role)),
-      staff: isStaff(roles), mfa: !!mfa?.enabled_at }));
+      staff: isStaff(roles), mfa: !!mfa?.enabled_at, console: permsOf(roles).has('platform.users.view') }));
   }
 
   async function account(req, res, url, form) {
     const s = await session(req);
-    if (!s) { writeFlow(res, { c: SELF.id, x: token(16), next: url.pathname === '/mfa' ? '/mfa' : '/account' }); return go(res, '/signin'); }
-    if (req.method === 'GET' && url.pathname === '/account') return accountPage(req, res, s);
-    if (req.method === 'GET' && url.pathname === '/mfa') return send(res, 200, P.mfaStep({ csrf: s.csrf }));
+    if (!s) { writeFlow(res, { c: SELF.id, x: token(16), next: url.pathname === '/mfa' ? '/mfa' + (url.searchParams.get('next') === '/console' ? '?next=/console' : '') : '/account' }); return go(res, '/signin'); }
+    if (req.method === 'GET' && url.pathname === '/account') return accountPage(req, res, s, url.searchParams.get('setup') === 'mfa' ? { notice: 'The console needs the second sign-in step. Set it up below, then open the console again.' } : {});
+    if (req.method === 'GET' && url.pathname === '/mfa') return send(res, 200, P.mfaStep({ csrf: s.csrf, next: url.searchParams.get('next') === '/console' ? '/console' : '' }));
     if (!same(form.csrf ?? '', s.csrf)) return accountPage(req, res, s, { error: 'That page expired. Please try again.', status: 400 });
     switch (url.pathname) {
       case '/account/profile': {
@@ -489,7 +494,7 @@ export function makeCore(cfg, deps = {}) {
         if (row?.enabled_at) return accountPage(req, res, s, { error: 'The second step is already on.' });
         const data = { user_id: s.user.id, secret_sealed: seal(secret, cfg.key), last_step: -1 };
         if (row) await pb.update('nv_mfa', row.id, data); else await pb.create('nv_mfa', data);
-        return accountPage(req, res, s, { setup: { secret, uri: totp.otpauth(secret, s.user.handle || s.user.id) } });
+        return accountPage(req, res, s, { setup: { secret, uri: totp.otpauth(secret, s.user.handle || s.user.id, cfg.brand === 'Noveniqe' ? 'Novenique' : cfg.brand) } });
       }
       case '/account/mfa/enable': {
         const row = await pb.first('nv_mfa', `user_id=${q(s.user.id)}`), secret = row && unseal(row.secret_sealed, cfg.key);
@@ -512,7 +517,7 @@ export function makeCore(cfg, deps = {}) {
         await pb.update('nv_mfa', row.id, step !== null ? { last_step: step } : { recovery_hashes: row.recovery_hashes.filter((_, i) => i !== rec) });
         await pb.update('nv_sessions', s.id, { mfa_at: pbDate() });
         await A.audit(s.user.id, step !== null ? 'auth.mfa_passed' : 'auth.mfa_recovery_used', s.user.id);
-        return go(res, '/account');
+        return go(res, form.next === '/console' ? '/console' : '/account');
       }
     }
     return send(res, 404, P.message({ title: 'Not found', text: 'There is nothing here.' }));
@@ -565,6 +570,38 @@ export function makeCore(cfg, deps = {}) {
     return fail(res, 404, 'NOT_FOUND', 'No such endpoint');
   }
 
+  // ---------- the first Super Administrator ----------
+  // A new accounts site has nobody to grant the first role, so the owner's verified email (CORE_OWNER_EMAILS) becomes Super
+  // Administrator on its first sign-in, and only while nobody holds that role.
+  async function ownerCheck(userId, email) {
+    const e = String(email ?? '').toLowerCase();
+    if (!e || !cfg.owners?.includes(e)) return;
+    if (await pb.first('nv_roles', "product='platform' && role='super_admin'")) return;
+    await pb.create('nv_roles', { user_id: userId, product: 'platform', role: 'super_admin', granted_by: 'owner-setting' });
+    await A.audit('system', 'access.role_granted', userId, { product: 'platform', role: 'super_admin', via: 'CORE_OWNER_EMAILS' }, 'system');
+  }
+
+  // ---------- the console (lib/console.mjs): staff with platform.users.view, after the second step ----------
+  async function consoleRoute(req, res, url) {
+    const s = await session(req);
+    if (!s) { writeFlow(res, { c: SELF.id, x: token(16), next: '/console' }); return go(res, '/signin'); }
+    const rows = await A.roles(s.user.id);
+    if (!permsOf(rows).has('platform.users.view')) return send(res, 403, P.message({ title: 'Not for this account', text: 'The console is for the people who run this site. Ask the owner for access.', link: { href: '/account', label: 'Your account' } }));
+    if (cfg.staffMfa && !s.mfa_at) {
+      const mfa = await pb.first('nv_mfa', `user_id=${q(s.user.id)}`);
+      return go(res, mfa?.enabled_at ? '/mfa?next=/console' : '/account?setup=mfa');
+    }
+    const data = await C.everyone();
+    const product = cfg.clients[url.searchParams.get('product') ?? ''] ? url.searchParams.get('product') : '';
+    if (url.pathname === '/console/people.csv') {
+      await A.audit(s.user.id, 'console.people_exported', s.user.id, { product });
+      res.writeHead(200, { 'content-type': 'text/csv; charset=utf-8', 'cache-control': 'no-store',
+        'content-disposition': `attachment; filename="${(product || 'everyone')}-people-${new Date().toISOString().slice(0, 10)}.csv"` });
+      return res.end(C.csv(data, product));
+    }
+    return send(res, 200, C.page({ user: s.user, data, product, term: url.searchParams.get('q') ?? '', pageNo: Number(url.searchParams.get('page')) || 1 }));
+  }
+
   // ---------- the router ----------
   async function handle(req, res) {
     const url = new URL(req.url, cfg.publicUrl), path = url.pathname;
@@ -585,6 +622,7 @@ export function makeCore(cfg, deps = {}) {
     if (path.startsWith('/v1/')) return api(req, res, url, form);
     if (path.startsWith('/mail/') && (await E.pages(req, res, url, form, { send, go, ipOf }))) return;
     if (path.startsWith('/admin/api/')) return admin(req, res, url, form);
+    if (req.method === 'GET' && (path === '/console' || path === '/console/people.csv')) return consoleRoute(req, res, url);
     if (path === '/account' || path.startsWith('/account/') || path === '/signout' || path === '/mfa') return account(req, res, url, form);
     return send(res, 404, P.message({ title: 'Not found', text: 'There is nothing here.' }));
   }
