@@ -2,6 +2,10 @@
 // Each sign-in screen wears the game's name and colour; the shared core's name never shows (one account for every game).
 import { esc } from './util.mjs';
 
+// The accounts site's own name (Noveniqe for the games, Amaete for the studio's sites); set once from the settings.
+let BRAND = 'Noveniqe';
+export const setBrand = (b) => { if (b) BRAND = b; };
+
 const HEX = /^#[0-9a-fA-F]{6}$/;
 export function layout({ title, brand, color, body, back }) {
   const c = HEX.test(color ?? '') ? color : '#3D5AFE';
@@ -21,8 +25,8 @@ button.quiet,.btn.quiet{background:transparent;color:var(--ink);border-color:var
 ul.list{list-style:none;padding:0;margin:0 0 16px}ul.list li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
 ul.list li form button{margin:0;width:auto;padding:6px 12px;font-size:14px}h2{font-size:18px;margin:28px 0 8px}code{word-break:break-all}
 footer{margin-top:20px;text-align:center}footer a{color:var(--muted);font-size:14px}a{color:var(--brand)}
-</style></head><body><main><div class="brand"><span class="dot" aria-hidden="true"></span>${esc(brand ?? 'Noveniqe')}</div><div class="card">${body}</div>
-<footer>${back ? `<a href="${esc(back)}">Back to ${esc(brand)}</a>` : '<span class="muted">Noveniqe accounts</span>'}</footer></main></body></html>`;
+</style></head><body><main><div class="brand"><span class="dot" aria-hidden="true"></span>${esc(brand ?? BRAND)}</div><div class="card">${body}</div>
+<footer>${back ? `<a href="${esc(back)}">Back to ${esc(brand)}</a>` : `<span class="muted">${esc(BRAND)} accounts</span>`}</footer></main></body></html>`;
 }
 
 const hidden = (csrf) => `<input type="hidden" name="csrf" value="${esc(csrf)}">`;
@@ -56,7 +60,7 @@ export function mergeChoice({ client, csrf, who }) {
 }
 
 export function profileForm({ client, csrf, error, name = '', handle = '', action = '/profile', title = 'Choose your name' }) {
-  return layout({ title, brand: client?.name ?? 'Noveniqe', color: client?.color, back: client?.home, body: `
+  return layout({ title, brand: client?.name ?? BRAND, color: client?.color, back: client?.home, body: `
 <h1>${esc(title)}</h1><p class="muted">Your name and @handle are what other players see.</p>${err(error)}
 <form method="post" action="${esc(action)}">${hidden(csrf)}<label for="name">Name</label>
 <input id="name" name="display_name" maxlength="40" required autocomplete="nickname" value="${esc(name)}">
@@ -65,16 +69,16 @@ export function profileForm({ client, csrf, error, name = '', handle = '', actio
 }
 
 export function message({ title, text, client, link }) {
-  return layout({ title, brand: client?.name ?? 'Noveniqe', color: client?.color, back: client?.home, body: `<h1>${esc(title)}</h1><p>${esc(text)}</p>${link ? `<a class="btn" href="${esc(link.href)}">${esc(link.label)}</a>` : ''}` });
+  return layout({ title, brand: client?.name ?? BRAND, color: client?.color, back: client?.home, body: `<h1>${esc(title)}</h1><p>${esc(text)}</p>${link ? `<a class="btn" href="${esc(link.href)}">${esc(link.label)}</a>` : ''}` });
 }
 
-export function mfaStep({ csrf, error }) {
+export function mfaStep({ csrf, error, next }) {
   return layout({ title: 'Second sign-in step', body: `<h1>Second sign-in step</h1><p>Staff accounts confirm with their authenticator app.</p>${err(error)}
-<form method="post" action="/mfa">${hidden(csrf)}<label for="code">6-digit code or a recovery code</label><input id="code" name="code" autocomplete="one-time-code" required autofocus>
+<form method="post" action="/mfa">${hidden(csrf)}${next ? `<input type="hidden" name="next" value="${esc(next)}">` : ''}<label for="code">6-digit code or a recovery code</label><input id="code" name="code" autocomplete="one-time-code" required autofocus>
 <button type="submit">Confirm</button></form>` });
 }
 
-export function account({ user, csrf, methods, sessions, roles, staff, mfa, notice, error, setup }) {
+export function account({ user, csrf, methods, sessions, roles, staff, mfa, notice, error, setup, console: consoleOn }) {
   const li = (a, b) => `<li><span>${a}</span>${b ?? ''}</li>`;
   return layout({ title: 'Your account', body: `<h1>${esc(user.display_name || 'Your account')}</h1>
 <p class="muted">${user.handle ? '@' + esc(user.handle) : 'No @handle yet'}</p>${notice ? `<p class="ok" role="status">${esc(notice)}</p>` : ''}${err(error)}
@@ -84,6 +88,7 @@ export function account({ user, csrf, methods, sessions, roles, staff, mfa, noti
 <h2>Where you're signed in</h2><ul class="list">${sessions.map((s) => li(`${esc(s.agent || 'A browser')}<br><span class="muted">${esc(s.when)}${s.current ? ' · this one' : ''}</span>`,
     s.current ? '' : `<form method="post" action="/account/sessions/revoke">${hidden(csrf)}<input type="hidden" name="id" value="${esc(s.id)}"><button class="quiet" type="submit">Sign out</button></form>`)).join('')}</ul>
 <form method="post" action="/signout">${hidden(csrf)}<input type="hidden" name="everywhere" value="1"><button class="quiet" type="submit">Sign out everywhere</button></form>
+${consoleOn ? `<a class="btn" href="/console">Open the console</a>` : ''}
 ${roles.length ? `<h2>Your roles</h2><ul class="list">${roles.map((r) => li(esc(r))).join('')}</ul>` : ''}
 ${staff ? `<h2>Second sign-in step</h2>${mfa ? '<p>On. Your authenticator app is set up.</p>' : setup ? `<p>Add this key to your authenticator app, then enter the code it shows.</p>
 <p><code>${esc(setup.secret)}</code></p><p><a href="${esc(setup.uri)}">Open in an authenticator app</a></p>

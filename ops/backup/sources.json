@@ -18,6 +18,11 @@
       "copy": ["/etc/novenique", "/etc/palasora-novenique.env"]
     },
     {
+      "name": "onyx-accounts",
+      "sqlite": ["/var/lib/onyx-pb/*.db"],
+      "copy": ["/var/lib/onyx-pb/storage", "/etc/onyx"]
+    },
+    {
       "name": "jisst",
       "copy": ["/var/lib/jisst/snapshot", "/etc/jisst.env", "/etc/jisst-tuwunel.toml", "/etc/jisst-livekit.yaml"]
     },

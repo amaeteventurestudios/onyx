@@ -11,4 +11,4 @@ for (let i = 1; ; i++) {   // the database may still be starting after a reboot
 await core.listen();
 // the email block's background work: scheduled newsletters, newsletters going out in batches, automation steps
 setInterval(() => core.email.tick().catch((e) => console.error('[email] tick', e.message)), Number(process.env.MAIL_TICK_SECONDS || 30) * 1000).unref?.();
-console.log(`Novenique Core on http://${cfg.host}:${cfg.port} (${cfg.mode}; public ${cfg.publicUrl}; Google ${cfg.google ? 'on' : 'off'}; email ${cfg.mail.on ? cfg.mail.provider : 'off'})`);
+console.log(`${cfg.brand} accounts on http://${cfg.host}:${cfg.port} (${cfg.mode}; public ${cfg.publicUrl}; Google ${cfg.google ? 'on' : 'off'}; email ${cfg.mail.on ? cfg.mail.provider : 'off'})`);
