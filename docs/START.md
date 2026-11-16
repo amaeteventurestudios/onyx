@@ -9,7 +9,7 @@ Games and the rest never share people. Same code (`core/`), two separate install
 
 | | Games (Noveniqe) | Everything else (Amaete) |
 | --- | --- | --- |
-| Who | Palasora, Agent Grand Prix, Agent Warfront, Anansora | The 3D sites (3D Worlds, Afrorama, ESP32 Labs, Build, Math in 3D, Cutaways, Teardowns, Sim Factory, Prebyld) and the products (SavvyMe, Isoteh, Prebuild, Remodel, Jisste, CoreTech Media, Cathora) |
+| Who | Palasora, Agent Grand Prix, Agent Warfront, Anansora | The 3D sites (3D Worlds, Afrorama, ESP32 Labs, Build, Math in 3D, Cutaways, Chem Lab, Teardowns, Sim Factory, Prebyld) and the products (SavvyMe, Isoteh, Prebuild, Remodel, Jisste, CoreTech Media, Cathora) |
 | Address | accounts.noveniqe.com | accounts.amaete.com (onyx.amaete.com opens its console) |
 | Database | Palasora's PocketBase (`users` + `nv_*`) | its own PocketBase, `/var/lib/onyx-pb` (`core/store/pb_migrations`) |
 | Products list | `core/deploy/clients.json` | `core/deploy/onyx-clients.json` |
