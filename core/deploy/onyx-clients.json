@@ -66,6 +66,31 @@
       "redirect_uris": [
         "https://cutaways.amaete.com/api/account?do=return"
       ]
+    },
+    {
+      "id": "frontcabin",
+      "name": "Front Cabin",
+      "product": "frontcabin",
+      "guests": false,
+      "share_email": true,
+      "color": "#D8B46A",
+      "home": "https://frontcabin.amaete.com",
+      "secret_sha256": "fba1b1060bb043380a866683f6ea632015a7b1629ad2399dd7be2243f43b3a09",
+      "email": {
+        "on": true,
+        "address": "",
+        "monthly": 2000,
+        "lists": {
+          "alerts": {
+            "name": "Front Cabin deal alerts",
+            "double_opt_in": false,
+            "public": false
+          }
+        }
+      },
+      "redirect_uris": [
+        "https://frontcabin.amaete.com/api/account?do=return"
+      ]
     }
   ]
 }

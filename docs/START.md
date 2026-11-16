@@ -81,6 +81,9 @@ product's handoff); each one is on the list to move into Onyx.
    the owner's go: from then on real people get mail. Sends use the shared mailbox under the product's name unless the
    product sets its own `from`. A public list (`"public": true`) also takes a plain HTML form posting to
    `https://accounts.noveniqe.com/mail/join` (`product`, `list`, `email`, `name`, and an empty hidden `website` field).
+   A product that writes one email for one person (an alert they asked for) calls `POST /v1/email/message` with the list,
+   the person (`email` or `user_id`, active on that list) and the subject and body: same mailbox, footer and unsubscribe, no
+   postal address needed, counted against the monthly cap. Front Cabin does this for its deal alerts.
 5. **Watching.** Add the site to the uptime list and to Umami (`ops/server/monitoring.sh`).
 6. **Own brand.** People see the product's name, never "Onyx" or "Noveniqe". Keep `BRAND` in one place in the product.
 
@@ -98,6 +101,7 @@ product's handoff); each one is on the list to move into Onyx.
 | Isoteh | yes, keeps its own accounts (isoteh PR #19) | own ledger | yes | yes |
 | Anansora | yes, stories kept on the server | moving | yes | yes |
 | Agent Warfront | yes, kit kept on the account | no | yes | yes |
+| Front Cabin | yes (Contabo), Google and email codes; email list "alerts" (on: deal alerts, one email per person per deal) | no | no (Contabo) | on Contabo |
 
 Not yet on Onyx: Jollof Pages, Jollof Studio, AuthorNX, Pagneto, CoreTech Media, Cathora (each with its own sign-in on
 another machine). Planned products (Egusi, Shop Gantry) start on Onyx. The full survey and order are in the plan

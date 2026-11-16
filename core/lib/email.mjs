@@ -15,6 +15,8 @@
 //   POST   /v1/email/people/unsubscribe { list, email | user_id }
 //   POST   /v1/email/people/tags { list, email | user_id, add?, remove? }               adding a tag can start automations
 //   POST   /v1/email/event { email | user_id, event, list? }                            starts "event" automations
+//   POST   /v1/email/message { list, email | user_id, subject, preheader?, body }       one email to one active person (an alert
+//                                                       they asked for): no postal address needed, counts against the cap
 //   POST   /v1/email/preview { list, subject, preheader, body }                         { html, text } exactly as sent
 //   POST   /v1/email/sends { id?, list, subject, preheader?, body, audience? }          save a newsletter draft
 //   GET    /v1/email/sends/<id>                          the newsletter, its numbers and its top links
@@ -202,7 +204,8 @@ export function makeEmail({ cfg, pb, A }) {
     const sends = await all('nv_mail_sends', `product=${q(c.product)} && sent_at >= ${q(pbDate(monthStart()))}`, 'id', 'recipients');
     const autos = await all('nv_mail_autos', `product=${q(c.product)}`, 'id', 'by_month');
     const k = monthKey();
-    return sends.reduce((n, s) => n + (s.recipients || 0), 0) + autos.reduce((n, a) => n + Number((a.by_month || {})[k] || 0), 0);
+    const messages = await all('nv_mail_messages', `product=${q(c.product)} && ok=true && created >= ${q(pbDate(monthStart()))}`, 'id', 'id');
+    return sends.reduce((n, s) => n + (s.recipients || 0), 0) + autos.reduce((n, a) => n + Number((a.by_month || {})[k] || 0), 0) + messages.length;
   }
   const monthly = (c) => Number(conf(c).monthly ?? 5000);
 
@@ -387,6 +390,26 @@ export function makeEmail({ cfg, pb, A }) {
         if (p) started += await enrol(c, p, 'event', event);
       }
       return json(res, 200, { started });
+    }
+    if (M === 'POST' && path === '/v1/email/message') {
+      // One email to one person, written by the product for them (Front Cabin's deal alerts). Same mailbox, sender, footer and
+      // one-click unsubscribe as everything else; only someone active on the list gets it, and it counts against the month.
+      if (!ec.on) return off();
+      const list = listArg(form.list);
+      if (!list) return fail(res, 400, 'BAD_LIST', 'This product has no such list');
+      const subject = clip(form.subject, 150), preheader = clip(form.preheader, 150), body = String(form.body ?? '');
+      if (!subject) return fail(res, 400, 'NO_SUBJECT', 'Add a subject line');
+      if (!hasContent(body)) return fail(res, 400, 'NO_BODY', 'Write the email first');
+      if (body.length > BODY_MAX) return fail(res, 413, 'TOO_LARGE', 'This email is too long');
+      const p = await findPerson(c, list.id, who(form));
+      if (!p) return fail(res, 404, 'NOT_ON_LIST', 'That person is not on this list');
+      if (p.status !== 'active') return fail(res, 409, 'NOT_ACTIVE', p.status === 'unsubscribed' ? 'That person unsubscribed' : 'That person has not confirmed yet');
+      if (limited(`message:${c.id}:${p.id}`, 30, 3600_000)) return fail(res, 429, 'SLOW_DOWN', 'That is a lot of email for one person. Try again in an hour.');
+      const used = await usedThisMonth(c);
+      if (used + 1 > monthly(c)) return json(res, 402, { error: { code: 'LIMIT', message: `This would go over the ${monthly(c)} emails a month (${used} used)` }, used, limit: monthly(c) });
+      const ok = await deliver(c, p, { subject, preheader, body }).catch(() => false);
+      await pb.create('nv_mail_messages', { product: c.product, list: list.id, person_id: p.id, subject, ok: !!ok });
+      return ok ? json(res, 200, { sent: true, to: p.email }) : fail(res, 502, 'MAIL', 'The mail server did not take it');
     }
     if (M === 'POST' && path === '/v1/email/preview') {
       const list = listArg(form.list) ?? listOf(c, lists[0]);
@@ -578,6 +601,7 @@ export function makeEmail({ cfg, pb, A }) {
     if (!f) return;
     for (const p of await all('nv_mail_people', f, 'id', 'id')) {
       for (const r of await all('nv_mail_runs', `person_id=${q(p.id)}`, 'id', 'id')) await pb.remove('nv_mail_runs', r.id).catch(() => {});
+      for (const m of await all('nv_mail_messages', `person_id=${q(p.id)}`, 'id', 'id')) await pb.remove('nv_mail_messages', m.id).catch(() => {});
       await pb.remove('nv_mail_people', p.id).catch(() => {});
     }
   }

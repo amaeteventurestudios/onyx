@@ -202,3 +202,36 @@ test('with no sender of its own, a product sends from the shared mailbox under i
     assert.equal(t2.cfg.mail.sent.at(-1).from, '"News" <accounts@shared.test>');
   } finally { t2.stop(); }
 });
+
+test('one-to-one messages: only to someone active on the list, with the unsubscribe footer, counted against the month; no postal address needed', async () => {
+  const ONE = { ...NEWS, id: 'one', product: 'one', guests: true, email: { on: true, monthly: 3, lists: { alerts: { name: 'One alerts', double_opt_in: false } } } };
+  const t2 = await start({ clients: { one: ONE }, mail: { ...t.cfg.mail, provider: 'sink', from: 'Accounts <accounts@shared.test>', sent: [] } });
+  SECRETS.one = SECRETS.shop;
+  try {
+    const o = (m, p, body) => api(t2, ONE, m, p, body);
+    const msg = (extra = {}) => o('POST', '/v1/email/message', { list: 'alerts', subject: 'Lagos to Doha: a deal', body: '# Hi {name|there}\n\n[[Open it](https://one.test/app)]', ...extra });
+    assert.equal((await msg({ email: 'nobody@example.com' })).body.error.code, 'NOT_ON_LIST');
+    const uid = (await api(t2, ONE, 'POST', '/v1/guests', {})).body.user.id;
+    await o('POST', '/v1/email/people', { list: 'alerts', email: 'ada@example.com', name: 'Ada', user_id: uid, verified: true });
+    let r = await msg({ user_id: uid });
+    assert.equal(r.status, 200); assert.equal(r.body.to, 'ada@example.com');
+    const m = t2.cfg.mail.sent.at(-1);
+    assert.equal(m.to, 'ada@example.com'); assert.equal(m.subject, 'Lagos to Doha: a deal'); assert.equal(m.from, '"News" <accounts@shared.test>');
+    assert.match(m.html, /Hi Ada/); assert.match(m.headers['List-Unsubscribe'], /\/mail\/u\//); assert.match(m.text, /Unsubscribe:/);
+    assert.equal((await o('GET', '/v1/email')).body.month.used, 1, 'counts against the month');
+    assert.equal((await msg({ email: 'ada@example.com', subject: '' })).body.error.code, 'NO_SUBJECT');
+    assert.equal((await msg({ email: 'ada@example.com', body: '   ' })).body.error.code, 'NO_BODY');
+    await msg({ email: 'ada@example.com' }); await msg({ email: 'ada@example.com' });
+    r = await msg({ email: 'ada@example.com' });
+    assert.equal(r.status, 402, 'the monthly cap holds'); assert.equal(r.body.error.code, 'LIMIT');
+    await o('POST', '/v1/email/people/unsubscribe', { list: 'alerts', email: 'ada@example.com' });
+    assert.equal((await msg({ email: 'ada@example.com' })).body.error.code, 'NOT_ACTIVE');
+    const OFF2 = { ...ONE, id: 'one-off', product: 'one-off', email: { ...ONE.email, on: false } };
+    const t3 = await start({ clients: { 'one-off': OFF2 }, mail: { ...t.cfg.mail, provider: 'sink', sent: [] } });
+    SECRETS['one-off'] = SECRETS.shop;
+    try { assert.equal((await api(t3, OFF2, 'POST', '/v1/email/message', { list: 'alerts', email: 'ada@example.com', subject: 'S', body: 'B' })).status, 409, 'switched off'); }
+    finally { t3.stop(); }
+    await t2.core.accounts.erase(uid);
+    assert.equal((await o('GET', `/v1/email/people?list=alerts&user_id=${uid}`)).body.person, null, 'deleting the account forgets them');
+  } finally { t2.stop(); }
+});
