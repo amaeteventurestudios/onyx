@@ -433,7 +433,8 @@ export function makeCore(cfg, deps = {}) {
     const um = path.match(/^\/v1\/users\/([a-z0-9]{15})$/);
     if (req.method === 'GET' && um) {
       const id = await A.resolve(um[1]), u = await A.active(id);
-      return u ? json(res, 200, { user: A.publicView(u, await A.account(id)), roles: await rolesFor(id, client), merged_into: id !== um[1] ? id : null })
+      // viewFor: a product with share_email also gets the person's verified email here (its server keeps it for alerts)
+      return u ? json(res, 200, { user: viewFor(client, u, await A.account(id)), roles: await rolesFor(id, client), merged_into: id !== um[1] ? id : null })
         : fail(res, 404, 'NOT_FOUND', 'Unknown user');
     }
     if (req.method === 'GET' && path === '/v1/authz') {

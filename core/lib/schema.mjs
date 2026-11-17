@@ -62,6 +62,9 @@ export const TABLES = {
   nv_mail_events: [[T('key', { required: true, max: 120 }), S('type', ['open', 'click', 'link']), T('product', { max: 40 }), T('send_id', { max: 40 }), T('auto_id', { max: 40 }),
     N('step'), T('person_id', { max: 40 }), T('url', { max: 2000 })],
     ['CREATE UNIQUE INDEX idx_nv_mail_events ON nv_mail_events (key)', 'CREATE INDEX idx_nv_mail_events_send ON nv_mail_events (send_id)', 'CREATE INDEX idx_nv_mail_events_auto ON nv_mail_events (auto_id)']],
+  // one-to-one messages a product sends one person on its list (an alert they asked for): counted against the monthly cap
+  nv_mail_messages: [[T('product', { required: true, max: 40 }), T('list', { max: 40 }), T('person_id', { max: 40 }), T('subject', { max: 150 }), B('ok')],
+    ['CREATE INDEX idx_nv_mail_messages ON nv_mail_messages (product, created)', 'CREATE INDEX idx_nv_mail_messages_person ON nv_mail_messages (person_id)']],
   // every Stripe event already used, so a retried webhook changes nothing
   nv_stripe_events: [[T('event_id', { required: true, max: 120 }), T('type', { max: 60 }), T('product', { max: 40 }), T('user_id', { max: 40 })],
     ['CREATE UNIQUE INDEX idx_nv_stripe_events ON nv_stripe_events (event_id)']],

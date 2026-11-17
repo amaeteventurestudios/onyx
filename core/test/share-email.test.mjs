@@ -27,6 +27,9 @@ test('email code on the product screen: the sharing product gets the email, othe
   const a = await api(t, CLIENTS.agp, 'POST', '/v1/signin/email/verify', { email, code: t.cfg.mail.last.code });
   assert.equal(a.body.user.id, v.body.user.id, 'one account across products');
   assert.equal(a.body.user.email, undefined, 'a product without share_email never sees it');
+  const uid = v.body.user.id;
+  assert.equal((await api(t, savvyme, 'GET', `/v1/users/${uid}`)).body.user.email, email.toLowerCase(), 'the user lookup carries it for the sharing product');
+  assert.equal((await api(t, CLIENTS.agp, 'GET', `/v1/users/${uid}`)).body.user.email, undefined, 'and not for anyone else');
 });
 
 test('redirect sign-in: the token answer carries the email only for the sharing product', async () => {
