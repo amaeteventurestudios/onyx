@@ -68,6 +68,17 @@
       ]
     },
     {
+      "id": "chemlab",
+      "name": "Amaete Chem Lab",
+      "product": "chemlab",
+      "guests": false,
+      "color": "#F2A100",
+      "home": "https://chemlab.amaete.com",
+      "redirect_uris": [
+        "https://chemlab.amaete.com/api/account?do=return"
+      ]
+    },
+    {
       "id": "frontcabin",
       "name": "Front Cabin",
       "product": "frontcabin",
