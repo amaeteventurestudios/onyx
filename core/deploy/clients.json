@@ -162,7 +162,6 @@
       "guests": false,
       "color": "#F2B705",
       "home": "https://prebuild.amaete.com",
-      "secret_sha256": "96ac627c9a63a5e0153b5f118deac43badbba6297fc3f9baabb3698a6d66f113",
       "redirect_uris": [
         "https://prebuild.amaete.com/api/account?do=return"
       ],
