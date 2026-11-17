@@ -102,6 +102,19 @@
       "redirect_uris": [
         "https://frontcabin.amaete.com/api/account?do=return"
       ]
+    },
+    {
+      "id": "faesora",
+      "name": "Faesora",
+      "product": "faesora",
+      "guests": false,
+      "share_email": true,
+      "color": "#ED4B44",
+      "home": "https://app.faesora.amaete.com",
+      "secret_sha256": "21ce3dbf76e5ee74eec0d51d62b12602341b469dce6c76ad6011984a5975e7ec",
+      "redirect_uris": [
+        "https://app.faesora.amaete.com/oidc/return"
+      ]
     }
   ]
 }
