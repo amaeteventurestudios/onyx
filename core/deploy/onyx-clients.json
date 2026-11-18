@@ -116,6 +116,19 @@
         "https://app.faesora.amaete.com/oidc/return"
       ],
       "people": true
+    },
+    {
+      "id": "uyai",
+      "name": "UYAI",
+      "product": "uyai",
+      "guests": false,
+      "people": true,
+      "color": "#247C91",
+      "home": "https://uyai.amaete.com",
+      "redirect_uris": [
+        "https://uyai.amaete.com/api/account?do=return"
+      ],
+      "secret_sha256": "488d8d9e2053e3e1ad983b3f709f0a6eb0773d6a53856ba3b9900af7737b0748"
     }
   ]
 }
