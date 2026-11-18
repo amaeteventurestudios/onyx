@@ -12,7 +12,7 @@ const STAMPS = [{ name: 'created', type: 'autodate', onCreate: true }, { name: '
 export const TABLES = {
   // one row per person Core knows: guest or member, and where a merged guest went
   nv_accounts: [[T('user_id', { required: true, max: 40 }), S('kind', ['guest', 'member']), T('guest_token_hash', { max: 64 }), T('created_by_client', { max: 40 }),
-    T('merged_into', { max: 40 }), D('merged_at'), D('handle_changed_at'), D('deletion_requested_at')],
+    T('merged_into', { max: 40 }), D('merged_at'), D('handle_changed_at'), D('deletion_requested_at'), D('valid_after')],
     ['CREATE UNIQUE INDEX idx_nv_accounts_user ON nv_accounts (user_id)', "CREATE UNIQUE INDEX idx_nv_accounts_guest ON nv_accounts (guest_token_hash) WHERE guest_token_hash != ''"]],
   // sign-in methods: Google (subject = Google's account id) and email codes (subject = the address, lower case)
   nv_identities: [[T('user_id', { required: true, max: 40 }), S('provider', ['google', 'email']), T('subject', { required: true, max: 320 }), T('email', { max: 320 }), D('last_used_at')],
@@ -65,6 +65,18 @@ export const TABLES = {
   // one-to-one messages a product sends one person on its list (an alert they asked for): counted against the monthly cap
   nv_mail_messages: [[T('product', { required: true, max: 40 }), T('list', { max: 40 }), T('person_id', { max: 40 }), T('subject', { max: 150 }), B('ok')],
     ['CREATE INDEX idx_nv_mail_messages ON nv_mail_messages (product, created)', 'CREATE INDEX idx_nv_mail_messages_person ON nv_mail_messages (person_id)']],
+  // the people admin (lib/people.mjs): who may use each product that has "people": true, kept by product and email so access
+  // can be given before someone's first sign-in; open invitations; customer organizations; and each product's activity log
+  nv_members: [[T('product', { required: true, max: 40 }), T('email', { required: true, max: 320 }), T('user_id', { max: 40 }), S('role', ['admin', 'support', 'member']),
+    T('org', { max: 20 }), B('view_only'), J('extra'), T('name', { max: 80 }), T('granted_by', { max: 320 }), D('last_sign_in')],
+    ['CREATE UNIQUE INDEX idx_nv_members ON nv_members (product, email)', 'CREATE INDEX idx_nv_members_user ON nv_members (user_id)']],
+  nv_invites: [[T('product', { required: true, max: 40 }), T('email', { required: true, max: 320 }), T('name', { max: 80 }), S('role', ['admin', 'support', 'member']),
+    T('org', { max: 20 }), B('view_only'), J('extra'), T('invited_by', { max: 320 }), D('expires_at')],
+    ['CREATE INDEX idx_nv_invites ON nv_invites (product, email)']],
+  nv_orgs: [[T('product', { required: true, max: 40 }), T('org_id', { required: true, max: 20 }), T('name', { required: true, max: 80 }), T('notes', { max: 500 }), J('data'), T('created_by', { max: 320 })],
+    ['CREATE UNIQUE INDEX idx_nv_orgs ON nv_orgs (product, org_id)']],
+  nv_activity: [[T('product', { required: true, max: 40 }), T('by', { max: 320 }), T('text', { max: 300 }), T('org', { max: 20 }), S('kind', ['change', 'sign_in'])],
+    ['CREATE INDEX idx_nv_activity ON nv_activity (product, created)']],
   // every Stripe event already used, so a retried webhook changes nothing
   nv_stripe_events: [[T('event_id', { required: true, max: 120 }), T('type', { max: 60 }), T('product', { max: 40 }), T('user_id', { max: 40 })],
     ['CREATE UNIQUE INDEX idx_nv_stripe_events ON nv_stripe_events (event_id)']],

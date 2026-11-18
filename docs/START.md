@@ -34,6 +34,7 @@ The 3D sites use the kit's gate (`kit/web/onyx-gate.js`): one scene free, then s
 | Sign-in, saved work and Pro sheet dropped into any website (static, Vercel or Node) | Onyx kit | `kit/web/` (`onyx-server.js`, `onyx-account.js`, `onyx-account.css`), `kit/README.md` |
 | Plans, passes, trials, Stripe checkout and the billing page | Onyx pass | `core/lib/billing.mjs`; plans live in `core/deploy/clients.json` |
 | Roles per product, staff with a second sign-in step, audit trail | Onyx roles | `core/lib/roles.mjs` |
+| People admin: invite people by email, the four roles (super admin, admin, support, member; view only), customer organizations, sign out everywhere, activity log, at accounts.amaete.com/admin/<product> | Onyx people | `core/lib/people.mjs`, `core/lib/peopleadmin.mjs`, `core/PEOPLE.md`; `"people": true` in the product's client entry |
 | Saving a person's work (a shelf per person per product) | Onyx items | `core/lib/items.mjs`, `/v1/items` |
 | Email to the people who want it: lists with tags, double opt-in, newsletters (now or scheduled), automations (on joining, on a tag, on an event the product sends), unsubscribe in one click, open and click reports | Onyx email | `core/lib/email.mjs`, `/v1/email`; lists live with the product in `core/deploy/clients.json` (`email`) |
 | Hosting on the shared server with push-to-deploy | Deploy desk | a `<product>-deploy.yml` workflow in the noveniqe repo + the product's own `deploy/install.sh` |
@@ -84,8 +85,13 @@ product's handoff); each one is on the list to move into Onyx.
    A product that writes one email for one person (an alert they asked for) calls `POST /v1/email/message` with the list,
    the person (`email` or `user_id`, active on that list) and the subject and body: same mailbox, footer and unsubscribe, no
    postal address needed, counted against the monthly cap. Front Cabin does this for its deal alerts.
-5. **Watching.** Add the site to the uptime list and to Umami (`ops/server/monitoring.sh`).
-6. **Own brand.** People see the product's name, never "Onyx" or "Noveniqe". Keep `BRAND` in one place in the product.
+5. **People** (any product with sign-in, staff or customers). Set `"people": true` on the product's client entry. Its
+   people are then run at `https://accounts.amaete.com/admin/<product id>` (invitations, roles, customers, activity), and
+   its server reads `person.role` from `/token` and `GET /v1/person` (`core/PEOPLE.md`). A person whose role is null has
+   no access: the product refuses them. Point the product's People menu at that admin page. Never keep a second list of
+   people in the product.
+6. **Watching.** Add the site to the uptime list and to Umami (`ops/server/monitoring.sh`).
+7. **Own brand.** People see the product's name, never "Onyx" or "Noveniqe". Keep `BRAND` in one place in the product.
 
 ## Products on Onyx
 
@@ -102,7 +108,7 @@ product's handoff); each one is on the list to move into Onyx.
 | Anansora | yes, stories kept on the server | moving | yes | yes |
 | Agent Warfront | yes, kit kept on the account | no | yes | yes |
 | Front Cabin | yes (Contabo), Google and email codes; email list "alerts" (on: deal alerts, one email per person per deal) | no | no (Contabo) | on Contabo |
-| Faesora | yes (Beelink), through an OpenID bridge in the faesora repo (`faesora-onyx/`): Onyx sign-in, verified email shared | no | no (Beelink, behind Hetzner) | on the Beelink |
+| Faesora | yes (Beelink), through an OpenID bridge in the faesora repo (`faesora-onyx/`): Onyx sign-in, verified email shared; people admin on (`/admin/faesora`) | no | no (Beelink, behind Hetzner) | on the Beelink |
 
 Not yet on Onyx: Jollof Pages, Jollof Studio, AuthorNX, Pagneto, CoreTech Media, Cathora (each with its own sign-in on
 another machine). Planned products (Egusi, Shop Gantry) start on Onyx. The full survey and order are in the plan

@@ -18,7 +18,9 @@ import { makeBilling } from './billing.mjs';
 import { makeItems } from './items.mjs';
 import { makeEmail } from './email.mjs';
 import { makeConsole } from './console.mjs';
-import { sendCode } from './mail.mjs';
+import { sendCode, sendMail } from './mail.mjs';
+import { makePeople, PeopleError } from './people.mjs';
+import { adminPages, inviteEmail } from './peopleadmin.mjs';
 import * as P from './pages.mjs';
 import * as totp from './totp.mjs';
 import { PRODUCTS, ROLES, permsOf, isStaff, checkRoleChange } from './roles.mjs';
@@ -38,6 +40,8 @@ export function makeCore(cfg, deps = {}) {
   const B = makeBilling({ cfg, pb, A, fetchImpl: deps.stripeFetch ?? fetchImpl });
   const I = makeItems({ pb, A, B });
   const E = makeEmail({ cfg, pb, A });
+  const PE = makePeople({ cfg, pb, A });
+  const sendInvite = (inv, client, by) => sendMail(cfg.mail, { to: inv.email, ...inviteEmail(client, by, inv), from: client.from || cfg.mail.from });
   A.onErase = (id, email) => E.forget(id, email);
   // A sign-in form's answer can redirect on to a game (and to Google), and form-action covers redirects, so list them.
   const formTargets = [...new Set([...Object.values(cfg.clients).flatMap((c) => c.redirect_uris.map((u) => new URL(u).origin)),
@@ -295,7 +299,7 @@ export function makeCore(cfg, deps = {}) {
     const u = await A.active(row.user_id);
     if (!u) return bad();
     return json(res, 200, { user: viewFor(client, u, await A.account(u.id)), roles: await rolesFor(u.id, client), merged_from: row.merged_from ?? [],
-      needs_profile: A.needsProfile(u), ticket: ticketFor(client, { u: u.id }) });
+      needs_profile: A.needsProfile(u), ticket: ticketFor(client, { u: u.id }), ...(await personFor(client, u)) });
   }
 
   // ---------- signing in on the game's own screen ----------
@@ -333,7 +337,7 @@ export function makeCore(cfg, deps = {}) {
     const u = await A.active(userId);
     if (!u) return { status: 404, body: { error: { code: 'NOT_FOUND', message: 'Unknown user' } } };
     return { status: 200, body: { user: viewFor(client, u, await A.account(u.id)), roles: await rolesFor(u.id, client), merged_from: mergedFrom,
-      needs_profile: A.needsProfile(u), ticket: ticketFor(client, { u: u.id, mf: mergedFrom }) } };
+      needs_profile: A.needsProfile(u), ticket: ticketFor(client, { u: u.id, mf: mergedFrom }), ...(await personFor(client, u)) } };
   }
   async function hereApi(req, res, client, path, form) {
     const out = (r) => json(res, r.status, r.body), ip = String(form.ip ?? '');
@@ -376,6 +380,13 @@ export function makeCore(cfg, deps = {}) {
     }
     return fail(res, 404, 'NOT_FOUND', 'No such endpoint');
   }
+  // A product with the people admin ("people": true) also gets the person's role there (null: no access, refuse them).
+  // The sign-in turns an open invitation into their role. The email is only in it for a product with share_email.
+  const personOut = (client, v) => (client.share_email === true ? v : { ...v, email: undefined });
+  async function personFor(client, u) {
+    if (client.people !== true) return {};
+    return { person: personOut(client, await PE.signedIn(client.id, u)) };
+  }
   const rolesFor = async (userId, client) => (await A.roles(userId)).filter((r) => r.product === 'platform' || r.product === client.product).map((r) => ({ product: r.product, role: r.role }));
 
   // ---------- service API for game servers ----------
@@ -387,6 +398,7 @@ export function makeCore(cfg, deps = {}) {
     if (path.startsWith('/v1/pass')) return B.api(req, res, url, form, client, json, fail);
     if (path === '/v1/items' || path.startsWith('/v1/items/')) return I.api(req, res, url, form, client, json, fail);
     if (path === '/v1/email' || path.startsWith('/v1/email/')) return E.api(req, res, url, form, client, json, fail);
+    if (PEOPLE_API.has(path)) return peopleApi(req, res, url, form, client);
     // the game's own signed-up players with their emails, for its owner's screen (the game's server only, never a browser)
     if (req.method === 'GET' && path === '/v1/players') {
       const accts = [];
@@ -451,6 +463,69 @@ export function makeCore(cfg, deps = {}) {
     return fail(res, 404, 'NOT_FOUND', 'No such endpoint');
   }
 
+  // ---------- the people admin, for a product's server (core/PEOPLE.md); only its own product ----------
+  const PEOPLE_API = new Set(['/v1/person', '/v1/people', '/v1/roles', '/v1/invites', '/v1/invites/revoke', '/v1/orgs', '/v1/orgs/delete', '/v1/signout', '/v1/activity']);
+  async function peopleApi(req, res, url, form, client) {
+    if (client.people !== true) return fail(res, 403, 'FORBIDDEN', 'This product does not use the people admin');
+    const p = client.id, path = url.pathname, by = String(form.by ?? client.name).slice(0, 320), get = req.method === 'GET';
+    try {
+      if (get && path === '/v1/person') {
+        const id = url.searchParams.get('id'), email = String(url.searchParams.get('email') ?? '').trim().toLowerCase();
+        const u = id ? await A.active(await A.resolve(id)) : email ? await A.byEmail(email) : null;
+        if (u) return json(res, 200, { person: personOut(client, await PE.view(p, u)) });
+        const row = email ? await PE.memberRow(p, email) : null;   // given access, not signed in yet
+        return row ? json(res, 200, { person: personOut(client, await PE.view(p, null, row)) }) : fail(res, 404, 'NOT_FOUND', 'Unknown person');
+      }
+      if (get && path === '/v1/people') return json(res, 200, { people: (await PE.list(p)).map((v) => personOut(client, v)) });
+      if (!get && path === '/v1/roles') return json(res, 200, { person: await PE.setRole(p, { email: form.email, role: form.role ?? '', name: form.name, org: form.org, viewOnly: form.view_only, extra: form.extra }, by) });
+      if (get && path === '/v1/invites') return json(res, 200, { invites: await PE.invites(p) });
+      if (!get && path === '/v1/invites') {
+        const inv = await PE.invite(p, { email: form.email, role: form.role, name: form.name, org: form.org, viewOnly: form.view_only, extra: form.extra }, by);
+        const sent = form.send_email === true || form.send_email === 'true' || form.send_email === '1' ? await sendInvite(inv, client, by).catch(() => false) : false;
+        return json(res, 201, { invite: inv, emailed: sent });
+      }
+      if (!get && path === '/v1/invites/revoke') return json(res, 200, { invite: await PE.revokeInvite(p, form.id, by) });
+      if (get && path === '/v1/orgs') return json(res, 200, { orgs: await PE.orgs(p) });
+      if (!get && path === '/v1/orgs') return json(res, 200, { org: await PE.saveOrg(p, { id: form.id, keep_id: form.keep_id, name: form.name, notes: form.notes, data: form.data }, by) });
+      if (!get && path === '/v1/orgs/delete') { await PE.deleteOrg(p, form.id, by); return json(res, 200, { ok: true }); }
+      if (!get && path === '/v1/signout') {
+        const u = form.id ? await A.active(String(form.id)) : await A.byEmail(String(form.email ?? '').trim().toLowerCase());
+        if (!u || !(await PE.accessOf(p, u)).role) return fail(res, 404, 'NOT_FOUND', 'No such person here');
+        await PE.signOutEverywhere(p, u, by);
+        return json(res, 200, { ok: true });
+      }
+      if (get && path === '/v1/activity') return json(res, 200, { activity: await PE.activity(p, { limit: url.searchParams.get('limit') }) });
+      if (!get && path === '/v1/activity') {
+        if (!String(form.text ?? '').trim()) return fail(res, 400, 'BAD_REQUEST', 'Send text');
+        await PE.log(p, by, form.text, form.org || null);
+        return json(res, 201, { ok: true });
+      }
+      return fail(res, 405, 'METHOD', 'Wrong method');
+    } catch (e) {
+      if (e instanceof PeopleError) return fail(res, e.status, e.code, e.message);
+      throw e;
+    }
+  }
+
+  // ---------- the people admin pages (lib/peopleadmin.mjs): /admin and /admin/<product> ----------
+  async function peopleRoute(req, res, url, form) {
+    const s = await session(req);
+    if (!s) {
+      if (req.method !== 'GET') return go(res, '/signin');
+      writeFlow(res, { c: SELF.id, x: token(16), next: url.pathname }); return go(res, '/signin');
+    }
+    // the owner and platform staff run every product, so they confirm with the second step first (as for the console)
+    if (cfg.staffMfa && isStaff(await A.roles(s.user.id)) && !s.mfa_at) {
+      const mfa = await pb.first('nv_mfa', `user_id=${q(s.user.id)}`);
+      return go(res, mfa?.enabled_at ? `/mfa?next=${encodeURIComponent(url.pathname)}` : `/account?setup=mfa&next=${encodeURIComponent(url.pathname)}`);
+    }
+    return adminPages({ req, url, form, me: s.user, csrf: s.csrf, P: PE, sendInvite,
+      send: (status, html) => send(res, status, html), go: (location) => go(res, location) });
+  }
+
+  // where the second step may send someone back to: the console or a people admin page
+  const safeNext = (v) => (v === '/console' || /^\/admin(\/[a-z0-9_-]{1,40}){0,2}$/.test(String(v ?? '')) ? v : '');
+
   // ---------- the person's own account page ----------
   async function accountPage(req, res, s, extra = {}) {
     const [methods, sessions, roles, mfa] = await Promise.all([A.methods(s.user.id), pb.list('nv_sessions', { filter: `user_id=${q(s.user.id)} && expires_at>${q(pbDate())}`, sort: '-last_seen_at', perPage: 20 }),
@@ -464,9 +539,9 @@ export function makeCore(cfg, deps = {}) {
 
   async function account(req, res, url, form) {
     const s = await session(req);
-    if (!s) { writeFlow(res, { c: SELF.id, x: token(16), next: url.pathname === '/mfa' ? '/mfa' + (url.searchParams.get('next') === '/console' ? '?next=/console' : '') : '/account' }); return go(res, '/signin'); }
+    if (!s) { const n = safeNext(url.searchParams.get('next')); writeFlow(res, { c: SELF.id, x: token(16), next: url.pathname === '/mfa' ? '/mfa' + (n ? '?next=' + encodeURIComponent(n) : '') : '/account' }); return go(res, '/signin'); }
     if (req.method === 'GET' && url.pathname === '/account') return accountPage(req, res, s, url.searchParams.get('setup') === 'mfa' ? { notice: 'The console needs the second sign-in step. Set it up below, then open the console again.' } : {});
-    if (req.method === 'GET' && url.pathname === '/mfa') return send(res, 200, P.mfaStep({ csrf: s.csrf, next: url.searchParams.get('next') === '/console' ? '/console' : '' }));
+    if (req.method === 'GET' && url.pathname === '/mfa') return send(res, 200, P.mfaStep({ csrf: s.csrf, next: safeNext(url.searchParams.get('next')) }));
     if (!same(form.csrf ?? '', s.csrf)) return accountPage(req, res, s, { error: 'That page expired. Please try again.', status: 400 });
     switch (url.pathname) {
       case '/account/profile': {
@@ -519,7 +594,7 @@ export function makeCore(cfg, deps = {}) {
         await pb.update('nv_mfa', row.id, step !== null ? { last_step: step } : { recovery_hashes: row.recovery_hashes.filter((_, i) => i !== rec) });
         await pb.update('nv_sessions', s.id, { mfa_at: pbDate() });
         await A.audit(s.user.id, step !== null ? 'auth.mfa_passed' : 'auth.mfa_recovery_used', s.user.id);
-        return go(res, form.next === '/console' ? '/console' : '/account');
+        return go(res, safeNext(form.next) || '/account');
       }
     }
     return send(res, 404, P.message({ title: 'Not found', text: 'There is nothing here.' }));
@@ -561,6 +636,7 @@ export function makeCore(cfg, deps = {}) {
       else if (current) await pb.update('nv_roles', current.id, { role, granted_by: s.user.id });
       else await pb.create('nv_roles', { user_id: target.id, product, role, granted_by: s.user.id });
       await A.audit(s.user.id, role ? 'access.role_granted' : 'access.role_removed', target.id, { product, role, before: current?.role ?? null });
+      PE.forget();
       return json(res, 200, { roles: (await A.roles(target.id)).map((r) => ({ product: r.product, role: r.role })) });
     }
     if (req.method === 'GET' && (path === '/admin/api/audit' || path === '/admin/api/audit/export')) {
@@ -583,6 +659,7 @@ export function makeCore(cfg, deps = {}) {
     if (mine) await pb.update('nv_roles', mine.id, { role: 'super_admin', granted_by: 'owner-setting' });
     else await pb.create('nv_roles', { user_id: userId, product: 'platform', role: 'super_admin', granted_by: 'owner-setting' });
     await A.audit('system', 'access.role_granted', userId, { product: 'platform', role: 'super_admin', via: 'CORE_OWNER_EMAILS' }, 'system');
+    PE.forget();
   }
 
   // ---------- the console (lib/console.mjs): staff with platform.users.view, after the second step ----------
@@ -626,6 +703,7 @@ export function makeCore(cfg, deps = {}) {
     if (path.startsWith('/v1/')) return api(req, res, url, form);
     if (path.startsWith('/mail/') && (await E.pages(req, res, url, form, { send, go, ipOf }))) return;
     if (path.startsWith('/admin/api/')) return admin(req, res, url, form);
+    if (path === '/admin' || path.startsWith('/admin/')) return peopleRoute(req, res, url, form);
     if (req.method === 'GET' && (path === '/console' || path === '/console/people.csv')) return consoleRoute(req, res, url);
     if (path === '/account' || path.startsWith('/account/') || path === '/signout' || path === '/mfa') return account(req, res, url, form);
     return send(res, 404, P.message({ title: 'Not found', text: 'There is nothing here.' }));

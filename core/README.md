@@ -50,6 +50,10 @@ session cookie. Plain Node 22 with no dependencies.
   Nothing leaves for a product until its `email.on` is true, and newsletters wait for a postal address in the footer.
 - **Deleting an account.** The Actions workflow "Delete an account" (`core/tools/delete-user.mjs`, `A.erase()`) removes the name,
   @handle and email, ends every sign-in, identity and role, takes the person off every email list, and keeps the anonymous id for game records. The same email can sign up again.
+- **People admin** (`lib/people.mjs`, `lib/peopleadmin.mjs`, `PEOPLE.md`). A product with `"people": true` has its people run at
+  `/admin/<product>`: invitations by email, four roles (super admin, admin, support, member, plus view only), customer
+  organizations, sign out everywhere and an activity log. The platform Super Administrator is super admin in every product.
+  The product reads `person.role` from `/token` and `/v1/person`, and refuses a person with no role.
 - **Staff admin API.** `/admin/api/*`: users, granting roles, and the audit trail.
 
 ## Where data lives

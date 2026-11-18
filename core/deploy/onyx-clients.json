@@ -114,7 +114,8 @@
       "secret_sha256": "21ce3dbf76e5ee74eec0d51d62b12602341b469dce6c76ad6011984a5975e7ec",
       "redirect_uris": [
         "https://app.faesora.amaete.com/oidc/return"
-      ]
+      ],
+      "people": true
     }
   ]
 }
