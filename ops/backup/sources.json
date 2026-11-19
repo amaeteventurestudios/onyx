@@ -51,6 +51,11 @@
       "copy": ["/var/lib/anansora/data", "/etc/anansora.env"]
     },
     {
+      "name": "uyaii",
+      "sqlite": ["/var/lib/uyaii/*.db"],
+      "copy": ["/var/lib/uyaii/files", "/etc/uyaii"]
+    },
+    {
       "name": "monitoring",
       "sqlite": ["/var/lib/uptime-kuma/kuma.db"],
       "copy": ["/var/backups/novenique-umami/umami.sql.gz", "/etc/novenique/umami.env"]
