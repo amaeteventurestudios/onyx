@@ -110,7 +110,7 @@ product's handoff); each one is on the list to move into Onyx.
 | Front Cabin | yes (Contabo), Google and email codes; email list "alerts" (on: deal alerts, one email per person per deal) | no | no (Contabo) | on Contabo |
 | Faesora | yes (Beelink), through an OpenID bridge in the faesora repo (`faesora-onyx/`): Onyx sign-in, verified email shared; people admin on (`/admin/faesora`) | no | no (Beelink, behind Hetzner) | on the Beelink |
 | UYAII (uyaii.amaete.com; uyai.amaete.com redirects) | yes, sign-in through the account kit; people admin on (`/admin/uyai`), only people given a role can sign in | no | yes (moving from Contabo: noveniqe `uyaii-deploy.yml`, service uyaii on 127.0.0.1:8460) | yes (`uyaii` set) |
-| Cocoyam (cocoyam.amaete.com) | yes (Contabo), Django sign-in through the code flow with PKCE, Google or email; verified email shared | Stripe, its own (off until keys are set) | no (Contabo, its own Postgres) | on Contabo |
+| Cocoyam (cocoyam.amaete.com) | yes, Django sign-in through the code flow with PKCE, Google or email; verified email shared | Stripe, its own (off until keys are set) | yes (the server's Postgres; nightly dump at 02:40 UTC) | yes |
 
 Not yet on Onyx: Jollof Pages, Jollof Studio, AuthorNX, Pagneto, CoreTech Media, Cathora (each with its own sign-in on
 another machine). Planned products (Egusi, Shop Gantry) start on Onyx. The full survey and order are in the plan

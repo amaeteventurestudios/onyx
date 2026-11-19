@@ -56,6 +56,10 @@
       "copy": ["/var/lib/uyaii/files", "/etc/uyaii"]
     },
     {
+      "name": "cocoyam",
+      "copy": ["/var/lib/cocoyam/backup", "/var/lib/cocoyam/media", "/etc/cocoyam/cocoyam.env"]
+    },
+    {
       "name": "monitoring",
       "sqlite": ["/var/lib/uptime-kuma/kuma.db"],
       "copy": ["/var/backups/novenique-umami/umami.sql.gz", "/etc/novenique/umami.env"]
