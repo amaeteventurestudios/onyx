@@ -130,6 +130,19 @@
         "https://uyai.amaete.com/api/account?do=return"
       ],
       "secret_sha256": "488d8d9e2053e3e1ad983b3f709f0a6eb0773d6a53856ba3b9900af7737b0748"
+    },
+    {
+      "id": "cocoyam",
+      "name": "Cocoyam",
+      "product": "cocoyam",
+      "guests": false,
+      "share_email": true,
+      "color": "#354B32",
+      "home": "https://cocoyam.amaete.com",
+      "secret_sha256": "b99fcd578a057f7facb823835c24a7cb6d3797fc4542471a6cc66e1198c5b445",
+      "redirect_uris": [
+        "https://cocoyam.amaete.com/accounts/amaete/return/"
+      ]
     }
   ]
 }
