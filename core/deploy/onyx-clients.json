@@ -135,6 +135,7 @@
       "name": "Cocoyam",
       "product": "cocoyam",
       "guests": false,
+      "people": true,
       "share_email": true,
       "color": "#354B32",
       "home": "https://cocoyam.amaete.com",
