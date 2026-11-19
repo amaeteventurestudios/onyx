@@ -139,7 +139,6 @@
       "share_email": true,
       "color": "#354B32",
       "home": "https://cocoyam.amaete.com",
-      "secret_sha256": "b99fcd578a057f7facb823835c24a7cb6d3797fc4542471a6cc66e1198c5b445",
       "redirect_uris": [
         "https://cocoyam.amaete.com/accounts/amaete/return/"
       ]
